@@ -63,12 +63,32 @@ jobs:
 
       # The actual Gluon build — compile → link → package → APK
       - name: Build APK with Gluon Mobile
-        run: mvn -Pandroid gluonfx:build gluonfx:package -q
+        run: |
+          set +e
+          mvn -Pandroid gluonfx:build gluonfx:package
+          EXIT=$?
+          if [ $EXIT -ne 0 ]; then
+            echo "===== Dumping all gluonfx logs for diagnosis ====="
+            find target/gluonfx -name "*.log" 2>/dev/null | while read f; do
+              echo ""
+              echo "===== $f ====="
+              cat "$f"
+            done
+          fi
+          exit $EXIT
         env:
           ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
           ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_HOME }}
           # Bypass JDK 17 cgroup v2 NPE bug on modern Linux runners
           _JAVA_OPTIONS: "-XX:-UseContainerSupport"
+
+      - name: Upload gluonfx logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gluonfx-logs
+          path: target/gluonfx/**/*.log
+          if-no-files-found: ignore
 
       # Upload APK as a downloadable artifact (available for 30 days)
       - name: Upload APK artifact
