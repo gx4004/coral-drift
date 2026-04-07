@@ -67,6 +67,8 @@ jobs:
         env:
           ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
           ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_HOME }}
+          # Bypass JDK 17 cgroup v2 NPE bug on modern Linux runners
+          _JAVA_OPTIONS: "-XX:-UseContainerSupport"
 
       # Upload APK as a downloadable artifact (available for 30 days)
       - name: Upload APK artifact
