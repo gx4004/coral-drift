@@ -14,11 +14,19 @@ jobs:
         uses: actions/checkout@v4
 
       # GraalVM 21 with native-image support (required by Gluon Mobile)
-      - name: Set up GraalVM 21
-        uses: graalvm/setup-graalvm@v1
-        with:
-          java-version: '21'
-          distribution: 'graalvm'
+      # Gluon's own GraalVM fork — ships with the exact CAP caches that
+      # gluonfx-maven-plugin 1.0.22 expects (modern GraalVM JDK 21 doesn't).
+      - name: Download Gluon GraalVM (Java 17)
+        run: |
+          GRAAL_URL="https://github.com/gluonhq/graal/releases/download/gluon-22.1.0.1-Final/graalvm-svm-java17-linux-gluon-22.1.0.1-Final.zip"
+          curl -fsSL "$GRAAL_URL" -o /tmp/graal.zip
+          sudo unzip -q /tmp/graal.zip -d /opt/
+          GRAAL_DIR=$(find /opt -maxdepth 1 -name "graalvm-svm-java17*" -type d | head -1)
+          echo "JAVA_HOME=$GRAAL_DIR" >> $GITHUB_ENV
+          echo "GRAALVM_HOME=$GRAAL_DIR" >> $GITHUB_ENV
+          echo "$GRAAL_DIR/bin" >> $GITHUB_PATH
+          "$GRAAL_DIR/bin/java" -version
+          "$GRAAL_DIR/bin/native-image" --version
 
       # Gluon plugin requires Maven 3.8.x — ubuntu-latest ships with 3.9.x
       - name: Install Maven 3.8.8
