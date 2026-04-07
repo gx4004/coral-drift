@@ -36,9 +36,12 @@
   const PLAYER_X = 220;
   const PLAYER_W = 80;
   const PLAYER_H = 70;
-  const GRAVITY = 1800;
-  const JUMP_V = -720;
+  const GRAVITY = 1650;
+  const JUMP_V = -820;
   const BASE_SPEED = 320;
+  // Physics note: max jump height = 820²/(2·1650) ≈ 203px
+  // → max clearable coral top = 203 + 10 (hitbox slack) = 213px above ground
+  // Keep all coral heights well below this so jumps are always achievable.
 
   const PINK = '#ff69b4';
   const PINK_LIGHT = '#ff85c1';
@@ -519,9 +522,27 @@
   // ─── Obstacles (coral) ───────────────────────────────────────────────────
   const corals = [];
   let coralTimer = 0;
+  // Max coral height is capped well below the max jump arc so every coral
+  // is guaranteed clearable even at top game speed.
+  const MAX_CORAL_H = 150;
+  const MIN_CORAL_H = 60;
   function spawnCoral() {
     const type = Math.floor(Math.random() * 3);
-    const h = type === 2 ? rand(120, 170) : rand(80, 130);
+    // All types clamped to the guaranteed-jumpable range.
+    let h;
+    if (type === 2)      h = rand(90, MAX_CORAL_H);   // cluster — previously up to 170
+    else if (type === 0) h = rand(75, 135);             // spire
+    else                 h = rand(MIN_CORAL_H, 120);    // fan
+    // Ensure horizontal spacing gives the player time to land + jump again.
+    // At top speed (~800 px/s) one full jump covers ~650 px of world, so
+    // back-to-back spawns need at least that much gap when both are tall.
+    const lastCoral = corals[corals.length - 1];
+    if (lastCoral) {
+      const gap = (LOGICAL_W + 50) - (lastCoral.x + lastCoral.w);
+      const bothTall = h > 110 && lastCoral.h > 110;
+      const minGap = bothTall ? 480 : 280;
+      if (gap < minGap) return; // skip this spawn attempt, try again next tick
+    }
     corals.push({
       x: LOGICAL_W + 50,
       y: GROUND_Y - h,
@@ -537,7 +558,9 @@
     coralTimer -= dt;
     if (coralTimer <= 0) {
       spawnCoral();
-      coralTimer = rand(1.2, 2.1) / speedScale;
+      // Slower base spawn rate — the skip-on-too-close logic above also
+      // means some tick cycles will be skipped, giving natural breathing room.
+      coralTimer = rand(1.4, 2.4) / Math.min(speedScale, 1.8);
     }
     for (let i = corals.length - 1; i >= 0; i--) {
       const c = corals[i];
