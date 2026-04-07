@@ -1,0 +1,169 @@
+/*
+ * Coral Drift - Game Stylesheet
+ * Ocean-themed UI styling for JavaFX
+ */
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* ROOT STYLING */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+.root {
+    -fx-background-color: #0a1628;
+    -fx-font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* LABELS */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+.label {
+    -fx-text-fill: #e8f4f8;
+}
+
+.title-label {
+    -fx-font-size: 48px;
+    -fx-font-weight: bold;
+    -fx-text-fill: white;
+    -fx-effect: dropshadow(gaussian, rgba(78, 205, 196, 0.5), 15, 0, 0, 3);
+}
+
+.subtitle-label {
+    -fx-font-size: 18px;
+    -fx-text-fill: #a8d4e6;
+}
+
+.stat-label {
+    -fx-font-size: 16px;
+    -fx-text-fill: #a8d4e6;
+}
+
+.stat-value {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #e8f4f8;
+}
+
+.accent-label {
+    -fx-text-fill: #4ecdc4;
+    -fx-font-weight: bold;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* BUTTONS */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+.button {
+    -fx-background-color: linear-gradient(to bottom, #4ecdc4, #45b7aa);
+    -fx-text-fill: white;
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-padding: 12 30 12 30;
+    -fx-background-radius: 12;
+    -fx-cursor: hand;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.3), 10, 0, 0, 4);
+}
+
+.button:hover {
+    -fx-background-color: linear-gradient(to bottom, #5ee0d7, #4ecdc4);
+    -fx-effect: dropshadow(gaussian, rgba(78, 205, 196, 0.5), 15, 0, 0, 4);
+}
+
+.button:pressed {
+    -fx-background-color: linear-gradient(to bottom, #45b7aa, #3da89b);
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.2), 5, 0, 0, 2);
+}
+
+.button-secondary {
+    -fx-background-color: linear-gradient(to bottom, #3c5064, #283c50);
+}
+
+.button-secondary:hover {
+    -fx-background-color: linear-gradient(to bottom, #4a6478, #3c5064);
+}
+
+.button-danger {
+    -fx-background-color: linear-gradient(to bottom, #c85050, #963232);
+}
+
+.button-danger:hover {
+    -fx-background-color: linear-gradient(to bottom, #dc6464, #c85050);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* PANELS */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+.panel {
+    -fx-background-color: rgba(10, 22, 40, 0.85);
+    -fx-background-radius: 15;
+    -fx-border-color: rgba(78, 205, 196, 0.3);
+    -fx-border-radius: 15;
+    -fx-border-width: 2;
+    -fx-effect: dropshadow(gaussian, rgba(0, 0, 0, 0.4), 20, 0, 0, 5);
+}
+
+.hud-panel {
+    -fx-background-color: rgba(10, 22, 40, 0.75);
+    -fx-background-radius: 10;
+    -fx-border-color: rgba(78, 205, 196, 0.2);
+    -fx-border-radius: 10;
+    -fx-border-width: 1;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* OVERLAYS */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+.overlay-dim {
+    -fx-background-color: rgba(0, 0, 0, 0.7);
+}
+
+.overlay-panel {
+    -fx-background-color: rgba(10, 22, 40, 0.95);
+    -fx-background-radius: 20;
+    -fx-padding: 30;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* SPECIAL EFFECTS */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+.glow-text {
+    -fx-effect: dropshadow(gaussian, #4ecdc4, 10, 0.5, 0, 0);
+}
+
+.gold-text {
+    -fx-text-fill: #ffd93d;
+    -fx-effect: dropshadow(gaussian, #ffd93d, 8, 0.3, 0, 0);
+}
+
+.heart-text {
+    -fx-text-fill: #ff4757;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* SCROLLBARS (if any) */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+.scroll-bar {
+    -fx-background-color: transparent;
+}
+
+.scroll-bar .thumb {
+    -fx-background-color: rgba(78, 205, 196, 0.5);
+    -fx-background-radius: 5;
+}
+
+.scroll-bar .thumb:hover {
+    -fx-background-color: rgba(78, 205, 196, 0.7);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* ANIMATIONS (CSS animations for simple effects) */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+@keyframes pulse {
+    0% { -fx-scale-x: 1; -fx-scale-y: 1; }
+    50% { -fx-scale-x: 1.05; -fx-scale-y: 1.05; }
+    100% { -fx-scale-x: 1; -fx-scale-y: 1; }
+}
