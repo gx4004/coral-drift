@@ -109,9 +109,12 @@
     blinkTimer: 0, nextBlink: 2.5, blinking: false, blinkProgress: 0,
     expression: 'normal', // normal, happy, dead
     expressionTimer: 0,
+    hasShield: false,
+    shieldPulse: 0,
     reset() {
       this.y = GROUND_Y - PLAYER_H; this.vy = 0; this.onGround = true;
       this.squash = 1; this.expression = 'normal'; this.expressionTimer = 0;
+      this.hasShield = false; this.shieldPulse = 0;
     },
     jump() {
       if (this.onGround) {
@@ -156,6 +159,9 @@
         this.expressionTimer -= dt;
         if (this.expressionTimer <= 0 && this.expression !== 'dead') this.expression = 'normal';
       }
+
+      // Shield pulse (visual only)
+      if (this.hasShield) this.shieldPulse += dt * 4;
     },
     setHappy(dur) { this.expression = 'happy'; this.expressionTimer = dur; },
   };
@@ -188,6 +194,36 @@
 
     // Ambient sparkles
     drawSparkles(cx, cy + bob, Math.max(w, h));
+
+    // Shield bubble around the octopus when active
+    if (player.hasShield) {
+      const r = Math.max(w, h) * 0.95;
+      const pulse = 1 + Math.sin(player.shieldPulse) * 0.05;
+      const rr = r * pulse;
+      // Outer glow
+      const og = ctx.createRadialGradient(cx, cy + bob, rr * 0.6, cx, cy + bob, rr);
+      og.addColorStop(0, 'rgba(130, 210, 255, 0)');
+      og.addColorStop(0.7, 'rgba(130, 210, 255, 0.12)');
+      og.addColorStop(1, 'rgba(130, 210, 255, 0.35)');
+      ctx.fillStyle = og;
+      ctx.beginPath(); ctx.arc(cx, cy + bob, rr, 0, Math.PI * 2); ctx.fill();
+      // Main bubble
+      const g = ctx.createRadialGradient(cx - rr * 0.3, cy + bob - rr * 0.3, rr * 0.2, cx, cy + bob, rr);
+      g.addColorStop(0, 'rgba(220, 240, 255, 0.15)');
+      g.addColorStop(0.7, 'rgba(130, 200, 255, 0.15)');
+      g.addColorStop(1, 'rgba(90, 180, 220, 0.30)');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(cx, cy + bob, rr, 0, Math.PI * 2); ctx.fill();
+      // Edge
+      ctx.strokeStyle = 'rgba(180, 230, 255, 0.7)';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.arc(cx, cy + bob, rr, 0, Math.PI * 2); ctx.stroke();
+      // Highlight
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+      ctx.beginPath();
+      ctx.ellipse(cx - rr * 0.35, cy + bob - rr * 0.45, rr * 0.2, rr * 0.1, -0.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
   }
 
   function drawTentacles(x, y, w, h) {
@@ -701,6 +737,156 @@
     });
   }
 
+  // ─── Crabs (decorative ground walkers) ───────────────────────────────────
+  const crabs = [];
+  function initCrabs() {
+    crabs.length = 0;
+    for (let i = 0; i < 3; i++) {
+      crabs.push({
+        x: rand(0, LOGICAL_W),
+        y: GROUND_Y - 8,
+        vx: rand(-55, -25),          // always drifting left like the world
+        legPhase: rand(0, Math.PI * 2),
+        color: ['#e85a3b', '#ff8c66', '#d4432b'][i % 3],
+        size: rand(18, 24),
+      });
+    }
+  }
+  function updateCrabs(dt, worldSpeed) {
+    for (const c of crabs) {
+      c.x += (c.vx - worldSpeed * 0.35) * dt;
+      c.legPhase += dt * 12;
+      if (c.x + c.size < -20) {
+        c.x = LOGICAL_W + rand(20, 400);
+        c.y = GROUND_Y - 8;
+        c.size = rand(18, 24);
+      }
+    }
+  }
+  function renderCrabs() {
+    for (const c of crabs) {
+      const s = c.size;
+      const cx = c.x, cy = c.y;
+      // 4 legs per side, scuttle animation
+      ctx.strokeStyle = '#6b2418';
+      ctx.lineWidth = 2;
+      ctx.lineCap = 'round';
+      for (let i = 0; i < 4; i++) {
+        const t = i / 3 - 0.5;
+        const legLift = Math.sin(c.legPhase + i * 0.9) * 4;
+        // Left legs
+        ctx.beginPath();
+        ctx.moveTo(cx - s * 0.2 + t * s * 0.4, cy - s * 0.3);
+        ctx.lineTo(cx - s * 0.55 + t * s * 0.3, cy + 4 - legLift * 0.5);
+        ctx.lineTo(cx - s * 0.75 + t * s * 0.3, cy + 6);
+        ctx.stroke();
+        // Right legs
+        ctx.beginPath();
+        ctx.moveTo(cx + s * 0.2 - t * s * 0.4, cy - s * 0.3);
+        ctx.lineTo(cx + s * 0.55 - t * s * 0.3, cy + 4 - legLift * 0.5);
+        ctx.lineTo(cx + s * 0.75 - t * s * 0.3, cy + 6);
+        ctx.stroke();
+      }
+      // Body (shell)
+      const bodyGrad = ctx.createRadialGradient(cx - s * 0.2, cy - s * 0.5, s * 0.1, cx, cy - s * 0.3, s * 0.7);
+      bodyGrad.addColorStop(0, '#ffb088');
+      bodyGrad.addColorStop(0.5, c.color);
+      bodyGrad.addColorStop(1, '#6b2418');
+      ctx.fillStyle = bodyGrad;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy - s * 0.35, s * 0.65, s * 0.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#6b2418';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      // Claws (two small circles out front)
+      ctx.fillStyle = c.color;
+      ctx.beginPath();
+      ctx.arc(cx - s * 0.75, cy - s * 0.55, s * 0.18, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(cx + s * 0.75, cy - s * 0.55, s * 0.18, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      // Eyes (stalked)
+      ctx.strokeStyle = '#6b2418';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(cx - s * 0.2, cy - s * 0.6);
+      ctx.lineTo(cx - s * 0.2, cy - s * 0.85);
+      ctx.moveTo(cx + s * 0.2, cy - s * 0.6);
+      ctx.lineTo(cx + s * 0.2, cy - s * 0.85);
+      ctx.stroke();
+      ctx.fillStyle = '#000';
+      ctx.beginPath(); ctx.arc(cx - s * 0.2, cy - s * 0.9, 2.2, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(cx + s * 0.2, cy - s * 0.9, 2.2, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+
+  // ─── Shield bubbles (collectible) ────────────────────────────────────────
+  const shieldBubbles = [];
+  let shieldTimer = 0;
+  function spawnShieldBubble() {
+    shieldBubbles.push({
+      x: LOGICAL_W + 40,
+      y: GROUND_Y - rand(110, 240),
+      baseY: 0,
+      r: 26,
+      animTime: 0,
+      collected: false,
+    });
+    shieldBubbles[shieldBubbles.length - 1].baseY = shieldBubbles[shieldBubbles.length - 1].y;
+  }
+  function updateShieldBubbles(dt, speed) {
+    shieldTimer -= dt;
+    // Rare — one roughly every 12-18 seconds, and never if player already has one
+    if (shieldTimer <= 0) {
+      if (!player.hasShield) spawnShieldBubble();
+      shieldTimer = rand(12, 18);
+    }
+    for (let i = shieldBubbles.length - 1; i >= 0; i--) {
+      const s = shieldBubbles[i];
+      s.x -= speed * dt;
+      s.animTime += dt;
+      s.y = s.baseY + Math.sin(s.animTime * 2.5) * 6;
+      if (s.x + s.r < -50) shieldBubbles.splice(i, 1);
+    }
+  }
+  function renderShieldBubbles() {
+    for (const s of shieldBubbles) {
+      // Glow
+      const glow = ctx.createRadialGradient(s.x, s.y, s.r * 0.3, s.x, s.y, s.r * 1.8);
+      glow.addColorStop(0, 'rgba(130, 210, 255, 0.4)');
+      glow.addColorStop(1, 'rgba(130, 210, 255, 0)');
+      ctx.fillStyle = glow;
+      ctx.beginPath(); ctx.arc(s.x, s.y, s.r * 1.8, 0, Math.PI * 2); ctx.fill();
+      // Bubble body
+      const bg = ctx.createRadialGradient(s.x - s.r * 0.3, s.y - s.r * 0.3, s.r * 0.1, s.x, s.y, s.r);
+      bg.addColorStop(0, 'rgba(240, 250, 255, 0.6)');
+      bg.addColorStop(0.6, 'rgba(140, 210, 255, 0.4)');
+      bg.addColorStop(1, 'rgba(80, 170, 230, 0.5)');
+      ctx.fillStyle = bg;
+      ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = 'rgba(200, 240, 255, 0.9)';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2); ctx.stroke();
+      // Highlight
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+      ctx.beginPath();
+      ctx.ellipse(s.x - s.r * 0.35, s.y - s.r * 0.4, s.r * 0.18, s.r * 0.1, -0.5, 0, Math.PI * 2);
+      ctx.fill();
+      // Orbital sparkles
+      for (let i = 0; i < 3; i++) {
+        const a = s.animTime * 2 + i * (Math.PI * 2 / 3);
+        const ox = Math.cos(a) * (s.r + 6);
+        const oy = Math.sin(a) * (s.r + 6);
+        ctx.fillStyle = `rgba(200, 240, 255, ${0.5 + 0.3 * Math.sin(s.animTime * 3 + i)})`;
+        ctx.beginPath(); ctx.arc(s.x + ox, s.y + oy, 2, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+  }
+
   // ─── Particles ───────────────────────────────────────────────────────────
   const particles = [];
   function spawnParticleBurst(x, y, color, count) {
@@ -777,10 +963,35 @@
            a.y < b.y + b.h && a.y + a.height > b.y;
   }
   function checkCollisions() {
+    // Shield bubble pickup first (so you can grab one mid-jump into a coral)
+    for (let i = shieldBubbles.length - 1; i >= 0; i--) {
+      const s = shieldBubbles[i];
+      const dx = (player.x + player.width / 2) - s.x;
+      const dy = (player.y + player.height / 2) - s.y;
+      if (Math.hypot(dx, dy) < s.r + 30) {
+        shieldBubbles.splice(i, 1);
+        player.hasShield = true;
+        player.shieldPulse = 0;
+        sfx.collect();
+        spawnParticleBurst(s.x, s.y, '#a8dcff', 14);
+        spawnFloat('SHIELD!', s.x - 30, s.y - 20, '#a8dcff', 22);
+      }
+    }
+
     // Coral hits + near misses
     for (const c of corals) {
       const shrunkA = { x: player.x + 15, y: player.y + 10, width: player.width - 30, height: player.height - 20 };
       if (rectCollide(shrunkA, c)) {
+        if (player.hasShield) {
+          // Absorb the hit, consume the shield, punch the coral away
+          player.hasShield = false;
+          c.x -= 200; // shove the coral offscreen-ish so we don't re-collide next frame
+          spawnParticleBurst(player.x + player.width / 2, player.y + player.height / 2, '#a8dcff', 20);
+          spawnFloat('SHIELD BROKE!', player.x, player.y - 30, '#a8dcff', 22);
+          cameraShake = 8;
+          sfx.hit();
+          return;
+        }
         die();
         return;
       }
@@ -992,6 +1203,8 @@
       player.update(dt);
       updateCorals(dt, speed);
       updateHearts(dt, speed);
+      updateShieldBubbles(dt, speed);
+      updateCrabs(dt, speed);
       updateBackground(dt, speed);
       updateParticles(dt);
       updateFloats(dt);
@@ -1005,6 +1218,8 @@
       updateBackground(dt, BASE_SPEED * 0.3);
       updateCorals(dt, BASE_SPEED * 0.3);
       updateHearts(dt, BASE_SPEED * 0.3);
+      updateShieldBubbles(dt, BASE_SPEED * 0.3);
+      updateCrabs(dt, BASE_SPEED * 0.3);
       updateParticles(dt);
       updateFloats(dt);
       player.update(dt);
@@ -1012,6 +1227,7 @@
       // Menu
       player.update(dt);
       updateBackground(dt, BASE_SPEED * 0.3);
+      updateCrabs(dt, BASE_SPEED * 0.3);
     }
     if (cameraShake > 0) cameraShake *= 0.9;
   }
@@ -1032,15 +1248,18 @@
     }
 
     renderBackground();
+    renderCrabs();  // behind everything else, ground level
 
     if (state === STATE_MENU) {
       renderCorals();
       renderHearts();
+      renderShieldBubbles();
       renderParticles();
       renderMenu();
     } else {
       renderCorals();
       renderHearts();
+      renderShieldBubbles();
       drawOctopus(player.x, player.y, player.width, player.height);
       renderParticles();
       renderFloats();
@@ -1059,11 +1278,14 @@
     speedScale = 1; cameraShake = 0; gameOverTime = 0;
     corals.length = 0;
     heartsList.length = 0;
+    shieldBubbles.length = 0;
     particles.length = 0;
     floats.length = 0;
     coralTimer = 1.5;
     heartTimer = 2;
+    shieldTimer = 8; // first shield bubble appears ~8s in
     player.reset();
+    initCrabs();
   }
 
   function handleInput() {
@@ -1083,6 +1305,7 @@
 
   // ─── Boot ────────────────────────────────────────────────────────────────
   initBackground();
+  initCrabs();
   loading.style.display = 'none';
   requestAnimationFrame(loop);
 })();
