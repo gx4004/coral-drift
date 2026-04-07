@@ -19,13 +19,13 @@ jobs:
         with:
           java-version: '21'
           distribution: 'graalvm'
-          components: 'native-image'
 
       # Android SDK is pre-installed on ubuntu-latest; install the NDK
       - name: Install Android NDK r25
         run: |
-          yes | sdkmanager --licenses > /dev/null 2>&1 || true
-          sdkmanager "ndk;25.2.9519653"
+          SDKMANAGER="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKMANAGER" --licenses > /dev/null 2>&1 || true
+          "$SDKMANAGER" "ndk;25.2.9519653"
           echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/25.2.9519653" >> $GITHUB_ENV
 
       # Cache Maven + Gluon native-image output to speed up repeat builds
