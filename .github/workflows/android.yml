@@ -20,6 +20,14 @@ jobs:
           java-version: '21'
           distribution: 'graalvm'
 
+      # Gluon plugin requires Maven 3.8.x — ubuntu-latest ships with 3.9.x
+      - name: Install Maven 3.8.8
+        run: |
+          curl -fsSL https://archive.apache.org/dist/maven/maven-3/3.8.8/binaries/apache-maven-3.8.8-bin.tar.gz -o /tmp/maven.tar.gz
+          sudo tar xzf /tmp/maven.tar.gz -C /opt/
+          echo "/opt/apache-maven-3.8.8/bin" >> $GITHUB_PATH
+          /opt/apache-maven-3.8.8/bin/mvn -version
+
       # Android SDK is pre-installed on ubuntu-latest; install the NDK
       - name: Install Android NDK r25
         run: |
