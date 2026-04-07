@@ -19,7 +19,7 @@ jobs:
         with:
           java-version: '21'
           distribution: 'graalvm'
-          native-image: 'true'
+          components: 'native-image'
 
       # Android SDK is pre-installed on ubuntu-latest; install the NDK
       - name: Install Android NDK r25
