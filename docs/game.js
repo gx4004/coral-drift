@@ -79,7 +79,7 @@
     osc.stop(now + dur + 0.05);
   }
   const sfx = {
-    jump:    () => playTone([320, 520], 0.12, 'sine', 0.12),
+    jump:    () => playTone([180, 75], 0.22, 'triangle', 0.16),
     collect: () => playTone([660, 880, 1100], 0.18, 'sine', 0.14),
     hit:     () => playTone([200, 80], 0.3, 'sawtooth', 0.18),
     gameover:() => playTone([300, 240, 180, 150], 0.8, 'triangle', 0.15),
@@ -120,7 +120,8 @@
       if (this.onGround) {
         this.vy = JUMP_V; this.onGround = false; this.squash = 1.25;
         sfx.jump();
-        spawnBlup(this.x + this.width / 2 + 25, this.y + 10);
+        spawnBlup(this.x + this.width / 2 + 18, this.y + 12);
+        spawnBlup(this.x + this.width / 2 + 42, this.y + 22);
       }
     },
     get width() { return PLAYER_W; },
@@ -545,13 +546,29 @@
     ctx.stroke();
     ctx.globalAlpha = 1;
 
-    // Bubbles
+    // Bubbles — glassy water spheres
     bubbles.forEach(b => {
-      ctx.strokeStyle = `rgba(180, 230, 255, 0.5)`;
-      ctx.lineWidth = 1.5;
+      // Translucent fill
+      const bg = ctx.createRadialGradient(b.x - b.r * 0.3, b.y - b.r * 0.35, b.r * 0.05, b.x, b.y, b.r);
+      bg.addColorStop(0, 'rgba(220, 245, 255, 0.22)');
+      bg.addColorStop(0.6, 'rgba(130, 200, 255, 0.10)');
+      bg.addColorStop(1, 'rgba(80, 170, 230, 0.20)');
+      ctx.fillStyle = bg;
+      ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2); ctx.fill();
+      // Iridescent rim
+      ctx.strokeStyle = `rgba(190, 235, 255, 0.55)`;
+      ctx.lineWidth = 1.2;
       ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2); ctx.stroke();
-      ctx.fillStyle = `rgba(255, 255, 255, 0.3)`;
-      ctx.beginPath(); ctx.arc(b.x - b.r * 0.3, b.y - b.r * 0.3, b.r * 0.25, 0, Math.PI * 2); ctx.fill();
+      // Top-left specular highlight
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.72)';
+      ctx.beginPath();
+      ctx.ellipse(b.x - b.r * 0.35, b.y - b.r * 0.38, b.r * 0.22, b.r * 0.13, -0.5, 0, Math.PI * 2);
+      ctx.fill();
+      // Tiny secondary glint bottom-right
+      ctx.fillStyle = 'rgba(200, 240, 255, 0.35)';
+      ctx.beginPath();
+      ctx.arc(b.x + b.r * 0.35, b.y + b.r * 0.3, b.r * 0.10, 0, Math.PI * 2);
+      ctx.fill();
     });
   }
 
@@ -576,7 +593,8 @@
     if (lastCoral) {
       const gap = (LOGICAL_W + 50) - (lastCoral.x + lastCoral.w);
       const bothTall = h > 110 && lastCoral.h > 110;
-      const minGap = bothTall ? 480 : 280;
+      // Gap scales with speed so the player always has time to land and jump again
+      const minGap = (bothTall ? 480 : 280) * Math.min(speedScale, 2.2);
       if (gap < minGap) return; // skip this spawn attempt, try again next tick
     }
     corals.push({
@@ -596,7 +614,7 @@
       spawnCoral();
       // Slower base spawn rate — the skip-on-too-close logic above also
       // means some tick cycles will be skipped, giving natural breathing room.
-      coralTimer = rand(1.4, 2.4) / Math.min(speedScale, 1.8);
+      coralTimer = rand(1.4, 2.4) / speedScale;
     }
     for (let i = corals.length - 1; i >= 0; i--) {
       const c = corals[i];
@@ -662,9 +680,6 @@
           ctx.fill();
         });
       }
-      // Outline
-      ctx.strokeStyle = 'rgba(60, 20, 40, 0.5)'; ctx.lineWidth = 1.5;
-      ctx.strokeRect(c.x, c.y, c.w, c.h);
       ctx.restore();
     });
   }
@@ -673,7 +688,7 @@
   const heartsList = [];
   let heartTimer = 0;
   function spawnHeart() {
-    const y = GROUND_Y - rand(80, 250);
+    const y = GROUND_Y - rand(80, 170);
     heartsList.push({
       x: LOGICAL_W + 50,
       y: y,
@@ -737,6 +752,77 @@
     });
   }
 
+  // ─── Fish (background mid-depth swimmers) ────────────────────────────────
+  const fishes = [];
+  const FISH_COLORS = ['#2a8a9a', '#1e6a8a', '#3aada0', '#24557a', '#2e7a8a', '#1a5070'];
+
+  function initFish() {
+    fishes.length = 0;
+    for (let i = 0; i < 7; i++) {
+      fishes.push({
+        x: rand(0, LOGICAL_W),
+        y: rand(60, GROUND_Y - 140),
+        vx: rand(-70, -25),
+        size: rand(12, 26),
+        color: FISH_COLORS[i % FISH_COLORS.length],
+        phase: rand(0, Math.PI * 2),
+        wiggle: rand(0, Math.PI * 2),
+      });
+    }
+  }
+  function updateFish(dt, worldSpeed) {
+    for (const f of fishes) {
+      f.x += (f.vx - worldSpeed * 0.12) * dt;
+      f.wiggle += dt * 2.8;
+      f.y += Math.sin(f.wiggle + f.phase) * 18 * dt;
+      f.y = clamp(f.y, 55, GROUND_Y - 130);
+      if (f.x + f.size * 2 < -20) {
+        f.x = LOGICAL_W + rand(40, 500);
+        f.y = rand(60, GROUND_Y - 140);
+        f.vx = rand(-70, -25);
+        f.size = rand(12, 26);
+      }
+    }
+  }
+  function renderFish() {
+    for (const f of fishes) {
+      ctx.save();
+      ctx.globalAlpha = 0.55;
+      const s = f.size;
+      const cx = f.x, cy = f.y;
+      const tilt = Math.sin(f.wiggle) * 0.12;
+      ctx.translate(cx, cy);
+      ctx.rotate(tilt);
+      // Body
+      ctx.fillStyle = f.color;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, s, s * 0.42, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // Tail (right side — fish swim left so tail trails behind)
+      ctx.beginPath();
+      ctx.moveTo(s * 0.75, 0);
+      ctx.lineTo(s * 1.55, -s * 0.45);
+      ctx.lineTo(s * 1.55, s * 0.45);
+      ctx.closePath();
+      ctx.fill();
+      // Belly highlight
+      ctx.fillStyle = 'rgba(255,255,255,0.18)';
+      ctx.beginPath();
+      ctx.ellipse(-s * 0.1, s * 0.1, s * 0.55, s * 0.18, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // Eye
+      ctx.fillStyle = 'rgba(0,0,0,0.55)';
+      ctx.beginPath();
+      ctx.arc(-s * 0.42, -s * 0.04, s * 0.13, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.6)';
+      ctx.beginPath();
+      ctx.arc(-s * 0.44, -s * 0.07, s * 0.05, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
   // ─── Crabs (decorative ground walkers) ───────────────────────────────────
   const crabs = [];
   function initCrabs() {
@@ -744,7 +830,7 @@
     for (let i = 0; i < 3; i++) {
       crabs.push({
         x: rand(0, LOGICAL_W),
-        y: GROUND_Y - 8,
+        y: GROUND_Y - 20,
         vx: rand(-55, -25),          // always drifting left like the world
         legPhase: rand(0, Math.PI * 2),
         color: ['#e85a3b', '#ff8c66', '#d4432b'][i % 3],
@@ -758,7 +844,7 @@
       c.legPhase += dt * 12;
       if (c.x + c.size < -20) {
         c.x = LOGICAL_W + rand(20, 400);
-        c.y = GROUND_Y - 8;
+        c.y = GROUND_Y - 20;
         c.size = rand(18, 24);
       }
     }
@@ -1198,12 +1284,16 @@
 
   function update(dt) {
     if (state === STATE_PLAYING) {
-      speedScale = 1 + Math.min(1.5, score / 400);
+      // Logarithmic base growth (never caps) + periodic wave surges every ~160 pts
+      const baseScale = 1 + Math.log1p(score / 250) * 0.9;
+      const waveSurge = 0.18 * Math.max(0, Math.sin((score / 80) * Math.PI));
+      speedScale = baseScale + waveSurge;
       const speed = BASE_SPEED * speedScale;
       player.update(dt);
       updateCorals(dt, speed);
       updateHearts(dt, speed);
       updateShieldBubbles(dt, speed);
+      updateFish(dt, speed);
       updateCrabs(dt, speed);
       updateBackground(dt, speed);
       updateParticles(dt);
@@ -1219,6 +1309,7 @@
       updateCorals(dt, BASE_SPEED * 0.3);
       updateHearts(dt, BASE_SPEED * 0.3);
       updateShieldBubbles(dt, BASE_SPEED * 0.3);
+      updateFish(dt, BASE_SPEED * 0.3);
       updateCrabs(dt, BASE_SPEED * 0.3);
       updateParticles(dt);
       updateFloats(dt);
@@ -1227,6 +1318,7 @@
       // Menu
       player.update(dt);
       updateBackground(dt, BASE_SPEED * 0.3);
+      updateFish(dt, BASE_SPEED * 0.3);
       updateCrabs(dt, BASE_SPEED * 0.3);
     }
     if (cameraShake > 0) cameraShake *= 0.9;
@@ -1248,7 +1340,8 @@
     }
 
     renderBackground();
-    renderCrabs();  // behind everything else, ground level
+    renderFish();   // mid-depth background swimmers
+    renderCrabs();  // ground level, in front of fish
 
     if (state === STATE_MENU) {
       renderCorals();
@@ -1285,6 +1378,7 @@
     heartTimer = 2;
     shieldTimer = 8; // first shield bubble appears ~8s in
     player.reset();
+    initFish();
     initCrabs();
   }
 
@@ -1305,6 +1399,7 @@
 
   // ─── Boot ────────────────────────────────────────────────────────────────
   initBackground();
+  initFish();
   initCrabs();
   loading.style.display = 'none';
   requestAnimationFrame(loop);
