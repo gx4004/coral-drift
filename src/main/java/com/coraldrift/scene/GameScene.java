@@ -5,12 +5,15 @@ import com.coraldrift.core.GameLoop;
 import com.coraldrift.core.GameState;
 import com.coraldrift.ui.HUD;
 import com.coraldrift.util.Constants;
-import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.image.PixelReader;
+import javafx.scene.image.PixelWriter;
+import javafx.scene.image.WritableImage;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.StackPane;
+import javafx.scene.SnapshotParameters;
 
 /**
  * Main gameplay scene with game rendering and input handling.
@@ -62,12 +65,20 @@ public class GameScene {
             public void render() {
                 gc.clearRect(0, 0, Constants.WINDOW_WIDTH, Constants.WINDOW_HEIGHT);
                 engine.render(gc);
+                // Chromatic aberration pass (3 frames after a hit)
+                if (engine.getScreenEffects().isChromaticActive()) {
+                    applyChromaticAberration(gc);
+                    engine.getScreenEffects().decrementChromatic();
+                }
             }
         });
         
         // HUD
         hud = new HUD();
-        
+
+        // Wire HUD observer for score pops
+        engine.setHeartCollectObserver((x, y, pts, gold) -> hud.spawnScorePop(x, y, pts));
+
         // Layout
         root.getChildren().addAll(gameCanvas, hud);
         StackPane.setAlignment(hud, Pos.TOP_LEFT);
@@ -154,6 +165,49 @@ public class GameScene {
     }
     
     /**
+     * Apply chromatic aberration to a region around the player area.
+     * Reads snapshot pixels and offsets R/G/B channels horizontally.
+     */
+    private void applyChromaticAberration(GraphicsContext gc) {
+        try {
+            // Scope to player-area for performance
+            int rx = (int) Math.max(0, Constants.PLAYER_X - 120);
+            int ry = (int) Math.max(0, Constants.GROUND_Y - Constants.PLAYER_HEIGHT * 2 - 20);
+            int rw = (int) Math.min(400, Constants.WINDOW_WIDTH - rx);
+            int rh = (int) Math.min(220, Constants.WINDOW_HEIGHT - ry);
+
+            SnapshotParameters params = new SnapshotParameters();
+            params.setViewport(new javafx.geometry.Rectangle2D(rx, ry, rw, rh));
+            WritableImage snap = gameCanvas.snapshot(params, null);
+            PixelReader reader = snap.getPixelReader();
+            WritableImage out  = new WritableImage(rw, rh);
+            PixelWriter writer = out.getPixelWriter();
+
+            int shift = 4;
+            for (int y = 0; y < rh; y++) {
+                for (int x = 0; x < rw; x++) {
+                    int rSrc = Math.min(x + shift, rw - 1);
+                    int bSrc = Math.max(x - shift, 0);
+
+                    int argbR = reader.getArgb(rSrc, y);
+                    int argbG = reader.getArgb(x,    y);
+                    int argbB = reader.getArgb(bSrc, y);
+
+                    int a = (argbG >> 24) & 0xFF;
+                    int r = (argbR >> 16) & 0xFF;
+                    int g = (argbG >>  8) & 0xFF;
+                    int b = (argbB      ) & 0xFF;
+
+                    writer.setArgb(x, y, (a << 24) | (r << 16) | (g << 8) | b);
+                }
+            }
+            gc.drawImage(out, rx, ry);
+        } catch (Exception ignored) {
+            // Snapshot may fail on some platforms — silently skip
+        }
+    }
+
+    /**
      * Show pause overlay.
      */
     private void showPause() {
@@ -167,8 +221,9 @@ public class GameScene {
         });
         
         root.getChildren().add(pauseOverlay);
+        engine.getScreenEffects().setPauseDim(0.45);
     }
-    
+
     /**
      * Hide pause overlay.
      */
@@ -177,6 +232,7 @@ public class GameScene {
             root.getChildren().remove(pauseOverlay);
             pauseOverlay = null;
             engine.resume();
+            engine.getScreenEffects().setPauseDim(0.0);
         }
     }
     

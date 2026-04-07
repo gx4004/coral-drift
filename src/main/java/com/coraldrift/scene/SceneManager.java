@@ -2,6 +2,7 @@ package com.coraldrift.scene;
 
 import com.coraldrift.util.Constants;
 import javafx.animation.FadeTransition;
+import javafx.animation.Interpolator;
 import javafx.scene.Scene;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
@@ -82,21 +83,23 @@ public class SceneManager {
         }
         
         // Fade out current, fade in new
-        FadeTransition fadeOut = new FadeTransition(Duration.millis(200), currentScene);
+        FadeTransition fadeOut = new FadeTransition(Duration.millis(350), currentScene);
         fadeOut.setFromValue(1.0);
         fadeOut.setToValue(0.0);
-        
+        fadeOut.setInterpolator(Interpolator.EASE_BOTH);
+
         StackPane oldScene = currentScene;
         currentScene = newScene;
         newScene.setOpacity(0);
         rootContainer.getChildren().add(newScene);
-        
+
         fadeOut.setOnFinished(e -> {
             rootContainer.getChildren().remove(oldScene);
-            
-            FadeTransition fadeIn = new FadeTransition(Duration.millis(200), newScene);
+
+            FadeTransition fadeIn = new FadeTransition(Duration.millis(350), newScene);
             fadeIn.setFromValue(0.0);
             fadeIn.setToValue(1.0);
+            fadeIn.setInterpolator(Interpolator.EASE_BOTH);
             fadeIn.play();
         });
         

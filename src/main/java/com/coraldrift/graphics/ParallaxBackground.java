@@ -18,10 +18,13 @@ public class ParallaxBackground {
     private final List<BackgroundElement>[] layers;
     private final double[] layerOffsets;
     private double scrollPosition = 0;
-    
+
+    // Falling stars (bioluminescent motes)
+    private final List<StarMote> starMotes;
+
     // Light rays
     private final List<LightRay> lightRays;
-    
+
     // Ocean floor
     private final List<Double> floorPoints;
     
@@ -38,6 +41,10 @@ public class ParallaxBackground {
             generateLayerElements(i);
         }
         
+        // Initialize star motes
+        starMotes = new ArrayList<>();
+        generateStarMotes();
+
         // Initialize light rays
         lightRays = new ArrayList<>();
         generateLightRays();
@@ -110,6 +117,29 @@ public class ParallaxBackground {
         }
     }
     
+    private void generateStarMotes() {
+        for (int i = 0; i < 40; i++) {
+            StarMote s = new StarMote();
+            s.x = MathUtil.randomRange(0, Constants.WINDOW_WIDTH);
+            s.y = MathUtil.randomRange(0, Constants.GROUND_Y);
+            s.size = MathUtil.randomRange(1.5, 4.0);
+            s.fallSpeed = MathUtil.randomRange(15, 50);
+            s.driftX = MathUtil.randomRange(-15, 15);
+            s.twinklePhase = MathUtil.randomRange(0, Math.PI * 2);
+            s.twinkleSpeed = MathUtil.randomRange(1.5, 4.0);
+            // Mostly white/cyan stars, occasionally a warm gold
+            double roll = Math.random();
+            if (roll < 0.5) {
+                s.r = 180; s.g = 230; s.b = 255; // cool blue-white
+            } else if (roll < 0.8) {
+                s.r = 255; s.g = 255; s.b = 255; // pure white
+            } else {
+                s.r = 255; s.g = 220; s.b = 100; // warm gold
+            }
+            starMotes.add(s);
+        }
+    }
+
     private void generateLightRays() {
         int rayCount = 6;
         for (int i = 0; i < rayCount; i++) {
@@ -150,6 +180,17 @@ public class ParallaxBackground {
             }
         }
         
+        // Update star motes
+        for (StarMote s : starMotes) {
+            s.y += s.fallSpeed * deltaTime;
+            s.x += s.driftX * deltaTime - scrollSpeed * 0.05 * deltaTime;
+            s.twinklePhase += s.twinkleSpeed * deltaTime;
+            // Wrap when off-screen
+            if (s.y > Constants.GROUND_Y) s.y = MathUtil.randomRange(-20, 0);
+            if (s.x < -10) s.x = Constants.WINDOW_WIDTH + MathUtil.randomRange(0, 50);
+            if (s.x > Constants.WINDOW_WIDTH + 10) s.x = MathUtil.randomRange(-50, 0);
+        }
+
         // Update light ray positions
         for (LightRay ray : lightRays) {
             ray.x -= scrollSpeed * 0.05 * deltaTime;
@@ -167,6 +208,9 @@ public class ParallaxBackground {
         // Ocean gradient background
         renderOceanGradient(gc);
         
+        // Falling star motes (bioluminescent particles)
+        renderStarMotes(gc);
+
         // Light rays (behind everything)
         renderLightRays(gc);
         
@@ -339,6 +383,35 @@ public class ParallaxBackground {
         gc.fillOval(x + w * 0.3, y - h * 0.3, w * 0.7, h * 0.8);
     }
     
+    private void renderStarMotes(GraphicsContext gc) {
+        gc.save();
+        for (StarMote s : starMotes) {
+            double alpha = 0.25 + 0.45 * (0.5 + 0.5 * Math.sin(s.twinklePhase));
+            gc.setGlobalAlpha(alpha);
+
+            // Soft glow halo
+            RadialGradient halo = new RadialGradient(
+                0, 0, 0.5, 0.5, 0.5, true, CycleMethod.NO_CYCLE,
+                new Stop(0, Color.rgb(s.r, s.g, s.b, 0.7)),
+                new Stop(1, Color.TRANSPARENT)
+            );
+            gc.setFill(halo);
+            double haloR = s.size * 2.5;
+            gc.fillOval(s.x - haloR, s.y - haloR, haloR * 2, haloR * 2);
+
+            // Core dot
+            gc.setFill(Color.rgb(s.r, s.g, s.b));
+            gc.fillOval(s.x - s.size / 2, s.y - s.size / 2, s.size, s.size);
+
+            // Cross sparkle lines
+            gc.setStroke(Color.rgb(s.r, s.g, s.b, 0.5));
+            gc.setLineWidth(0.8);
+            gc.strokeLine(s.x - s.size * 1.5, s.y, s.x + s.size * 1.5, s.y);
+            gc.strokeLine(s.x, s.y - s.size * 1.5, s.x, s.y + s.size * 1.5);
+        }
+        gc.restore();
+    }
+
     private void renderOceanFloor(GraphicsContext gc) {
         // Rich sandy gradient floor with multiple color stops
         LinearGradient floorGradient = new LinearGradient(
@@ -413,6 +486,8 @@ public class ParallaxBackground {
         for (int i = 0; i < layerOffsets.length; i++) {
             layerOffsets[i] = 0;
         }
+        starMotes.clear();
+        generateStarMotes();
     }
     
     // Inner classes for background elements
@@ -437,11 +512,18 @@ public class ParallaxBackground {
     private static class LightRay {
         double x, width, baseAlpha;
         double animTime = 0;
-        
+
         LightRay(double x, double width, double baseAlpha) {
             this.x = x;
             this.width = width;
             this.baseAlpha = baseAlpha;
         }
+    }
+
+    private static class StarMote {
+        double x, y, size;
+        double fallSpeed, driftX;
+        double twinklePhase, twinkleSpeed;
+        int r, g, b;
     }
 }

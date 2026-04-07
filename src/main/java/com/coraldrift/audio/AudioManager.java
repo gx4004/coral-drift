@@ -1,136 +1,147 @@
 package com.coraldrift.audio;
 
+import com.coraldrift.audio.ToneGenerator.ToneDesc;
+import com.coraldrift.audio.ToneGenerator.WaveShape;
 import com.coraldrift.util.SaveManager;
 
 /**
- * Handles all game audio.
- * Currently provides placeholder hooks for future sound implementation.
- * Audio can be added by placing .wav files in resources and updating the play methods.
+ * Manages all game audio using synthesized tones — no audio files required.
+ * All sounds are described by ToneDesc objects and played via ToneGenerator.
  */
 public class AudioManager {
-    
+
     private static AudioManager instance;
     private boolean soundEnabled;
-    
-    // Sound effect placeholders
-    // To add real sounds, use JavaFX MediaPlayer:
-    // private MediaPlayer jumpSound;
-    // private MediaPlayer collectSound;
-    // etc.
-    
+    private boolean initialized = false;
+    private ToneGenerator generator;
+
+    // ─── Pre-defined tone descriptors ─────────────────────────────────────────
+
+    private static final ToneDesc JUMP_DESC = new ToneDesc(
+        WaveShape.SINE, new double[]{320, 520}, 0.12, 0.005, 0.08, 0.55);
+
+    private static final ToneDesc COLLECT_DESC = new ToneDesc(
+        WaveShape.SINE, new double[]{660, 880, 1100}, 0.18, 0.008, 0.12, 0.6);
+
+    private static final ToneDesc GOLDEN_COLLECT_DESC = new ToneDesc(
+        WaveShape.SINE, new double[]{880, 1100, 1320, 880}, 0.28, 0.01, 0.18, 0.7, true);
+
+    private static final ToneDesc HIT_DESC = new ToneDesc(
+        WaveShape.SAWTOOTH, new double[]{200, 80}, 0.30, 0.002, 0.25, 0.65);
+
+    private static final ToneDesc GAME_OVER_DESC = new ToneDesc(
+        WaveShape.TRIANGLE, new double[]{300, 240, 180, 150}, 0.80, 0.01, 0.60, 0.55);
+
+    private static final ToneDesc SHIELD_DESC = new ToneDesc(
+        WaveShape.SINE, new double[]{1400, 900}, 0.15, 0.003, 0.12, 0.5);
+
+    private static final ToneDesc NEAR_MISS_DESC = new ToneDesc(
+        WaveShape.SQUARE, new double[]{440, 550}, 0.10, 0.002, 0.07, 0.4);
+
+    private static final ToneDesc CLICK_DESC = new ToneDesc(
+        WaveShape.SINE, new double[]{800, 700}, 0.06, 0.002, 0.04, 0.4);
+
+    // ─── Singleton ────────────────────────────────────────────────────────────
+
     private AudioManager() {
         soundEnabled = SaveManager.getInstance().isSoundEnabled();
     }
-    
+
     public static AudioManager getInstance() {
         if (instance == null) {
             instance = new AudioManager();
         }
         return instance;
     }
-    
-    /**
-     * Initialize audio system.
-     * Load sound files here when implementing real audio.
-     */
+
+    // ─── Lifecycle ────────────────────────────────────────────────────────────
+
     public void initialize() {
-        // Example of loading a sound file:
-        // URL resource = getClass().getResource("/com/coraldrift/sounds/jump.wav");
-        // if (resource != null) {
-        //     Media media = new Media(resource.toExternalForm());
-        //     jumpSound = new MediaPlayer(media);
-        //     jumpSound.setVolume(0.5);
-        // }
+        try {
+            generator = new ToneGenerator();
+            initialized = true;
+        } catch (Exception e) {
+            // Audio system unavailable — gracefully continue without sound
+            initialized = false;
+        }
     }
-    
-    /**
-     * Play jump sound effect.
-     */
+
+    public void dispose() {
+        if (generator != null) {
+            generator.dispose();
+        }
+    }
+
+    // ─── Sound effects ────────────────────────────────────────────────────────
+
     public void playJump() {
-        if (!soundEnabled) return;
-        // if (jumpSound != null) {
-        //     jumpSound.stop();
-        //     jumpSound.play();
-        // }
+        play(JUMP_DESC);
     }
-    
-    /**
-     * Play heart collection sound.
-     */
+
     public void playCollect() {
-        if (!soundEnabled) return;
-        // Play a satisfying "ding" or sparkle sound
+        play(COLLECT_DESC);
     }
-    
-    /**
-     * Play collision/hit sound.
-     */
+
+    public void playGoldenCollect() {
+        play(GOLDEN_COLLECT_DESC);
+    }
+
     public void playHit() {
-        if (!soundEnabled) return;
-        // Play a soft thud or "bonk"
+        play(HIT_DESC);
     }
-    
-    /**
-     * Play UI click sound.
-     */
+
+    public void playGameOver() {
+        play(GAME_OVER_DESC);
+    }
+
+    public void playShieldAbsorb() {
+        play(SHIELD_DESC);
+    }
+
+    public void playNearMiss() {
+        play(NEAR_MISS_DESC);
+    }
+
     public void playClick() {
-        if (!soundEnabled) return;
-        // Play a subtle click
+        play(CLICK_DESC);
     }
-    
+
     /**
-     * Play chain combo sound (pitched based on chain level).
+     * Ascending pitch per chain level — makes collecting hearts in a streak
+     * feel increasingly exciting.
      */
     public void playChainCombo(int chainLevel) {
-        if (!soundEnabled) return;
-        // Play ascending tones for higher chains
-        // Pitch could be: basePitch * (1 + chainLevel * 0.1)
+        if (!soundEnabled || !initialized) return;
+        double baseFreq = 440.0 * (1.0 + Math.min(chainLevel, 10) * 0.12);
+        ToneDesc chainDesc = new ToneDesc(
+            WaveShape.SINE,
+            new double[]{baseFreq, baseFreq * 1.25},
+            0.15, 0.008, 0.10, 0.5
+        );
+        generator.playAsync(chainDesc);
     }
-    
-    /**
-     * Play game over sound.
-     */
-    public void playGameOver() {
-        if (!soundEnabled) return;
-        // Play sad trombone or gentle failure sound
-    }
-    
-    /**
-     * Start background music.
-     */
-    public void playMusic() {
-        if (!soundEnabled) return;
-        // Start looping ambient underwater music
-    }
-    
-    /**
-     * Stop background music.
-     */
-    public void stopMusic() {
-        // Stop the music loop
-    }
-    
-    public boolean isSoundEnabled() {
-        return soundEnabled;
-    }
-    
+
+    // ─── Settings ─────────────────────────────────────────────────────────────
+
+    public boolean isSoundEnabled() { return soundEnabled; }
+
     public void setSoundEnabled(boolean enabled) {
         this.soundEnabled = enabled;
         SaveManager.getInstance().setSoundEnabled(enabled);
-        if (!enabled) {
-            stopMusic();
-        }
     }
-    
+
     public void toggleSound() {
         setSoundEnabled(!soundEnabled);
     }
-    
-    /**
-     * Cleanup audio resources.
-     */
-    public void dispose() {
-        stopMusic();
-        // Dispose all MediaPlayer instances
+
+    // ─── Internal ─────────────────────────────────────────────────────────────
+
+    private void play(ToneDesc desc) {
+        if (!soundEnabled || !initialized || generator == null) return;
+        generator.playAsync(desc);
     }
+
+    // Stubs kept for compatibility
+    public void playMusic() {}
+    public void stopMusic() {}
 }

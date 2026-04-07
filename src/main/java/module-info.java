@@ -3,6 +3,7 @@ module com.coraldrift {
     requires javafx.graphics;
     requires javafx.media;
     requires java.prefs;
+    requires java.desktop;
     
     exports com.coraldrift;
     exports com.coraldrift.core;

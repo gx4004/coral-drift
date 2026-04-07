@@ -1,6 +1,7 @@
 package com.coraldrift.spawner;
 
 import com.coraldrift.entity.CoralObstacle;
+import com.coraldrift.entity.GoldenHeart;
 import com.coraldrift.entity.HeartCollectible;
 import com.coraldrift.util.Constants;
 import com.coraldrift.util.MathUtil;
@@ -79,7 +80,11 @@ public class HeartSpawner {
         double minY = Constants.GROUND_Y - maxReachableHeight;
         y = Math.max(y, minY);
         
-        hearts.add(new HeartCollectible(x, y));
+        if (MathUtil.randomChance(Constants.GOLDEN_HEART_CHANCE)) {
+            hearts.add(new GoldenHeart(x, y));
+        } else {
+            hearts.add(new HeartCollectible(x, y));
+        }
     }
     
     public List<HeartCollectible> getHearts() {

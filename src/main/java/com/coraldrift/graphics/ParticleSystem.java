@@ -281,6 +281,62 @@ public class ParticleSystem {
         }
     }
     
+    /**
+     * Teal/cyan sparks for near-miss moments.
+     */
+    public void spawnNearMissEffect(double x, double y) {
+        for (int i = 0; i < 8; i++) {
+            Particle p = new Particle();
+            p.type = ParticleType.SPARKLE;
+            p.x = x + MathUtil.randomRange(-12, 12);
+            p.y = y + MathUtil.randomRange(-12, 12);
+            p.size = MathUtil.randomRange(4, 9);
+            p.currentSize = p.size;
+            double angle = MathUtil.randomRange(0, Math.PI * 2);
+            double speed = MathUtil.randomRange(90, 200);
+            p.vx = Math.cos(angle) * speed;
+            p.vy = Math.sin(angle) * speed - 40;
+            p.gravity = 150;
+            p.rotation = MathUtil.randomRange(0, 360);
+            p.rotationSpeed = MathUtil.randomRange(-120, 120);
+            p.maxLifetime = 0.4;
+            p.lifetime = p.maxLifetime;
+            p.alpha = 1.0;
+            p.currentAlpha = 1.0;
+            p.color = Color.hsb(MathUtil.randomRange(170, 200), 0.85, 1.0);
+            particles.add(p);
+        }
+    }
+
+    /**
+     * Gold explosion for golden heart collection.
+     */
+    public void spawnGoldenHeartEffect(double x, double y) {
+        for (int i = 0; i < 22; i++) {
+            Particle p = new Particle();
+            boolean isStar = MathUtil.randomChance(0.4);
+            boolean isHeart = !isStar && MathUtil.randomChance(0.3);
+            p.type = isStar ? ParticleType.STAR : (isHeart ? ParticleType.HEART_MINI : ParticleType.SPARKLE);
+            p.x = x;
+            p.y = y;
+            p.size = MathUtil.randomRange(8, 18);
+            p.currentSize = p.size;
+            double angle = MathUtil.randomRange(0, Math.PI * 2);
+            double speed = MathUtil.randomRange(150, 420);
+            p.vx = Math.cos(angle) * speed;
+            p.vy = Math.sin(angle) * speed - 80;
+            p.gravity = MathUtil.randomRange(100, 240);
+            p.rotation = MathUtil.randomRange(0, 360);
+            p.rotationSpeed = MathUtil.randomRange(-200, 200);
+            p.maxLifetime = 0.8;
+            p.lifetime = p.maxLifetime;
+            p.alpha = 1.0;
+            p.currentAlpha = 1.0;
+            p.color = Color.hsb(MathUtil.randomRange(38, 55), 0.95, 1.0);
+            particles.add(p);
+        }
+    }
+
     public void clear() {
         particles.clear();
     }

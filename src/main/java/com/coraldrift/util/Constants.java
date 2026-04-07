@@ -196,4 +196,31 @@ public final class Constants {
     public static final String SAVE_BEST_SCORE = "bestScore";
     public static final String SAVE_BEST_HEARTS = "bestHearts";
     public static final String SAVE_SOUND_ENABLED = "soundEnabled";
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // NEAR-MISS SYSTEM
+    // ═══════════════════════════════════════════════════════════════════════════
+    public static final double NEAR_MISS_THRESHOLD = 30.0;  // px beyond hitbox edge
+    public static final int NEAR_MISS_SCORE_BONUS = 5;
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // GOLDEN HEART
+    // ═══════════════════════════════════════════════════════════════════════════
+    public static final double GOLDEN_HEART_CHANCE = 0.15;
+    public static final int GOLDEN_HEART_SCORE_MULTIPLIER = 3;
+    public static final Color GOLDEN_HEART_COLOR = Color.web("#FFD700");
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // OCTOPUS BLINK / EXPRESSION
+    // ═══════════════════════════════════════════════════════════════════════════
+    public static final double BLINK_MIN_INTERVAL = 2.0;   // seconds
+    public static final double BLINK_MAX_INTERVAL = 4.5;   // seconds
+    public static final double BLINK_DURATION    = 0.15;   // seconds per blink cycle
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // HUD FLOATING TEXT
+    // ═══════════════════════════════════════════════════════════════════════════
+    public static final double SCORE_POP_LIFETIME     = 1.0;  // seconds
+    public static final double NEAR_MISS_TEXT_LIFETIME = 1.2; // seconds
+    public static final Color  NEAR_MISS_COLOR = Color.web("#4ecdc4");
 }

@@ -2,6 +2,7 @@ package com.coraldrift.scene;
 
 import com.coraldrift.audio.AudioManager;
 import com.coraldrift.graphics.BubbleEmitter;
+import com.coraldrift.graphics.OctopusRenderer;
 import com.coraldrift.graphics.ParallaxBackground;
 import com.coraldrift.ui.StyledButton;
 import com.coraldrift.ui.UIFactory;
@@ -32,6 +33,10 @@ public class MenuScene {
     private final ParallaxBackground background;
     private final BubbleEmitter bubbles;
     private AnimationTimer animationTimer;
+
+    // Menu octopus
+    private Canvas octopusCanvas;
+    private OctopusRenderer menuOctopus;
     
     // UI elements
     private VBox menuPanel;
@@ -68,9 +73,9 @@ public class MenuScene {
         // Title
         VBox titleBox = UIFactory.createGameTitle();
         
-        // Octopus icon (using emoji as placeholder)
-        Label octopusIcon = new Label("🐙");
-        octopusIcon.setFont(Font.font(64));
+        // Animated octopus
+        octopusCanvas = new Canvas(120, 110);
+        menuOctopus = new OctopusRenderer();
         
         // Buttons
         VBox buttonBox = new VBox(15);
@@ -105,7 +110,7 @@ public class MenuScene {
         );
         bestLabel.setTextFill(Constants.UI_TEXT_SECONDARY);
         
-        menuPanel.getChildren().addAll(titleBox, octopusIcon, buttonBox, bestLabel);
+        menuPanel.getChildren().addAll(titleBox, octopusCanvas, buttonBox, bestLabel);
     }
     
     private void createHowToPlayPanel() {
@@ -213,12 +218,18 @@ public class MenuScene {
                 // Update
                 background.update(deltaTime, Constants.BASE_SCROLL_SPEED * 0.3);
                 bubbles.update(deltaTime);
-                
-                // Render
+                menuOctopus.update(deltaTime, false, true, 0);
+
+                // Render background
                 GraphicsContext gc = backgroundCanvas.getGraphicsContext2D();
                 gc.clearRect(0, 0, Constants.WINDOW_WIDTH, Constants.WINDOW_HEIGHT);
                 background.render(gc);
                 bubbles.render(gc);
+
+                // Render octopus onto its canvas
+                GraphicsContext octGc = octopusCanvas.getGraphicsContext2D();
+                octGc.clearRect(0, 0, 120, 110);
+                menuOctopus.render(octGc, 0, 0, 120, 110);
             }
         };
         animationTimer.start();

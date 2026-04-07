@@ -35,6 +35,9 @@ public class GameState {
     // Flags
     private boolean newBestScore = false;
     private boolean newBestHearts = false;
+
+    // Near-miss tracking
+    private int nearMissCount = 0;
     
     public GameState(double initialScrollSpeed) {
         this.scrollSpeed = initialScrollSpeed;
@@ -153,6 +156,14 @@ public class GameState {
         }
     }
     
+    /** Record a near-miss and award a small bonus. */
+    public void recordNearMiss() {
+        nearMissCount++;
+        score += 5;
+    }
+
+    public int getNearMissCount() { return nearMissCount; }
+
     /**
      * Reset state for new game.
      */
@@ -169,6 +180,7 @@ public class GameState {
         difficultyFactor = 0;
         newBestScore = false;
         newBestHearts = false;
+        nearMissCount = 0;
     }
     
     // Getters and setters

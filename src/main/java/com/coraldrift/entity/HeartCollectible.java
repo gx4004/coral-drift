@@ -12,7 +12,7 @@ import javafx.scene.paint.*;
  */
 public class HeartCollectible extends Entity {
     
-    private double animTime = 0;
+    protected double animTime = 0;
     private double pulseScale = 1.0;
     private boolean collected = false;
     private double collectAnimTime = 0;

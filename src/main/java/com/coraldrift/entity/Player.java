@@ -28,6 +28,13 @@ public class Player extends Entity {
     private double deathFlashTimer = 0;
     private boolean showDeathFlash = false;
     
+    // Shield state
+    private boolean hasShield = false;
+    private double shieldTimer = 0;
+
+    // Expression timer
+    private double expressionTimer = 0;
+    
     public Player() {
         super(Constants.PLAYER_X, Constants.GROUND_Y - Constants.PLAYER_HEIGHT, 
               Constants.PLAYER_WIDTH, Constants.PLAYER_HEIGHT);
@@ -39,6 +46,23 @@ public class Player extends Entity {
         if (isDead) {
             updateDeathAnimation(deltaTime);
             return;
+        }
+        
+        // Update shield timer
+        if (hasShield) {
+            shieldTimer -= deltaTime;
+            if (shieldTimer <= 0) {
+                hasShield = false;
+                shieldTimer = 0;
+            }
+        }
+
+        // Expression timer — revert to NORMAL when timer expires
+        if (expressionTimer > 0) {
+            expressionTimer -= deltaTime;
+            if (expressionTimer <= 0) {
+                renderer.setExpression(com.coraldrift.graphics.OctopusRenderer.Expression.NORMAL);
+            }
         }
         
         // Update jump buffer timer
@@ -91,6 +115,7 @@ public class Player extends Entity {
         
         // Update renderer
         renderer.update(deltaTime, isJumping, onGround, velocityY);
+        renderer.setShielded(hasShield);
     }
     
     private void updateDeathAnimation(double deltaTime) {
@@ -164,11 +189,48 @@ public class Player extends Entity {
     }
     
     /**
+     * Activate shield for specified duration.
+     */
+    public void activateShield(double duration) {
+        hasShield = true;
+        shieldTimer = duration;
+    }
+    
+    /**
+     * Use shield to block one hit. Returns true if shield was active.
+     */
+    public boolean useShield() {
+        if (hasShield) {
+            hasShield = false;
+            shieldTimer = 0;
+            return true;
+        }
+        return false;
+    }
+    
+    public boolean hasShield() {
+        return hasShield;
+    }
+    
+    public double getShieldTimeRemaining() {
+        return shieldTimer;
+    }
+    
+    /**
+     * Trigger happy star expression for given duration.
+     */
+    public void triggerHappyExpression(double duration) {
+        expressionTimer = duration;
+        renderer.setExpression(com.coraldrift.graphics.OctopusRenderer.Expression.HAPPY_STAR);
+    }
+
+    /**
      * Called when player collides with obstacle.
      */
     public void die() {
         isDead = true;
         deathFlashTimer = 0;
+        renderer.setExpression(com.coraldrift.graphics.OctopusRenderer.Expression.DEAD);
     }
     
     /**
@@ -188,6 +250,9 @@ public class Player extends Entity {
         isDead = false;
         deathFlashTimer = 0;
         showDeathFlash = false;
+        hasShield = false;
+        shieldTimer = 0;
+        expressionTimer = 0;
         renderer.reset();
     }
     
