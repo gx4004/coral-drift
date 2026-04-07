@@ -64,6 +64,9 @@ jobs:
       # The actual Gluon build — compile → link → package → APK
       - name: Build APK with Gluon Mobile
         run: |
+          # Gluon downloads + manages its own Android SDK; clear conflicting vars
+          unset ANDROID_SDK_ROOT
+          unset ANDROID_HOME
           set +e
           mvn -Pandroid gluonfx:build gluonfx:package
           EXIT=$?
@@ -77,7 +80,6 @@ jobs:
           fi
           exit $EXIT
         env:
-          ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
           ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_HOME }}
           # Bypass JDK 17 cgroup v2 NPE bug on modern Linux runners
           _JAVA_OPTIONS: "-XX:-UseContainerSupport"
