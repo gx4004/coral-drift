@@ -1,0 +1,62 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:   # lets you trigger it manually from GitHub UI
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # GraalVM 21 with native-image support (required by Gluon Mobile)
+      - name: Set up GraalVM 21
+        uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: '21'
+          distribution: 'graalvm'
+          native-image: 'true'
+
+      # Android SDK is pre-installed on ubuntu-latest; install the NDK
+      - name: Install Android NDK r25
+        run: |
+          yes | sdkmanager --licenses > /dev/null 2>&1 || true
+          sdkmanager "ndk;25.2.9519653"
+          echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/25.2.9519653" >> $GITHUB_ENV
+
+      # Cache Maven + Gluon native-image output to speed up repeat builds
+      - name: Cache Maven repository
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      - name: Cache Gluon native-image output
+        uses: actions/cache@v4
+        with:
+          path: target/gluonfx
+          key: ${{ runner.os }}-gluonfx-${{ hashFiles('src/**/*.java', 'pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-gluonfx-
+
+      # The actual Gluon build — compile → link → package → APK
+      - name: Build APK with Gluon Mobile
+        run: mvn -Pandroid gluonfx:build gluonfx:package -q
+        env:
+          ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
+          ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_HOME }}
+
+      # Upload APK as a downloadable artifact (available for 30 days)
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coral-drift-android
+          path: target/gluonfx/aarch64-android/*.apk
+          if-no-files-found: error
+          retention-days: 30

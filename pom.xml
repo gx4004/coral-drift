@@ -17,6 +17,7 @@
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
         <javafx.version>21.0.2</javafx.version>
+        <gluonfx.target>host</gluonfx.target>
     </properties>
 
     <dependencies>
@@ -56,6 +57,30 @@
                     <mainClass>com.coraldrift.MainApp</mainClass>
                 </configuration>
             </plugin>
+
+            <!-- Gluon Mobile — cross-platform native builds (Android / iOS) -->
+            <plugin>
+                <groupId>com.gluonhq</groupId>
+                <artifactId>gluonfx-maven-plugin</artifactId>
+                <version>1.0.22</version>
+                <configuration>
+                    <target>${gluonfx.target}</target>
+                    <mainClass>com.coraldrift.MainApp</mainClass>
+                    <appIdentifier>com.coraldrift.jumpinggame</appIdentifier>
+                    <appName>Coral Drift</appName>
+                    <verbose>false</verbose>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <!-- Run with: mvn -Pandroid gluonfx:build gluonfx:package -->
+        <profile>
+            <id>android</id>
+            <properties>
+                <gluonfx.target>android</gluonfx.target>
+            </properties>
+        </profile>
+    </profiles>
 </project>

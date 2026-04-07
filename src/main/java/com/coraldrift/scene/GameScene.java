@@ -117,6 +117,16 @@ public class GameScene {
                 engine.releaseJump();
             }
         });
+
+        // Touch / mouse click — for Android (tap anywhere to jump / restart)
+        root.setOnMouseClicked(e -> {
+            if (engine.getState().isPlaying()) {
+                engine.jump();
+            } else if (engine.getState().isGameOver()) {
+                restartGame();
+            }
+        });
+        root.setOnMouseReleased(e -> engine.releaseJump());
     }
     
     /**
