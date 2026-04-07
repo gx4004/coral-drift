@@ -92,11 +92,18 @@ jobs:
           path: target/gluonfx/**/*.log
           if-no-files-found: ignore
 
+      - name: Locate APK
+        run: |
+          echo "===== APK files found: ====="
+          find target/gluonfx -name "*.apk" 2>/dev/null
+          echo "===== gluonfx tree: ====="
+          find target/gluonfx -maxdepth 6 -type d 2>/dev/null
+
       # Upload APK as a downloadable artifact (available for 30 days)
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: coral-drift-android
-          path: target/gluonfx/aarch64-android/*.apk
+          path: target/gluonfx/**/*.apk
           if-no-files-found: error
           retention-days: 30
