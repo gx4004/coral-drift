@@ -7,6 +7,7 @@ import javafx.scene.effect.DropShadow;
 import javafx.scene.effect.Glow;
 import javafx.scene.paint.*;
 import javafx.scene.shape.ArcType;
+import javafx.scene.shape.StrokeLineCap;
 
 /**
  * Procedural renderer for the pink octopus protagonist.
@@ -319,57 +320,83 @@ public class OctopusRenderer {
     }
     
     private void drawTentacles(GraphicsContext gc, double x, double y, double w, double h) {
-        int numTentacles = 8;
-        double tentacleLength = h * 0.6;
-        double tentacleWidth = w * 0.12;
-        double bodyBottom = y + h * 0.55;
-        double bodyWidth = w * 0.8;
-        
-        // Create gradient for tentacles
-        LinearGradient tentacleGradient = new LinearGradient(
-            0, 0, 0, 1, true, CycleMethod.NO_CYCLE,
-            new Stop(0, Constants.OCTOPUS_PINK),
-            new Stop(1, Constants.OCTOPUS_PINK.darker())
-        );
-        
-        gc.setFill(tentacleGradient);
-        gc.setStroke(Constants.OCTOPUS_PINK.darker().darker());
-        gc.setLineWidth(1.5);
-        
-        for (int i = 0; i < numTentacles; i++) {
-            // Position tentacles along body bottom
-            double t = (double) i / (numTentacles - 1);
-            double baseX = x + (w - bodyWidth) / 2 + t * bodyWidth;
-            
-            // Wave animation for each tentacle
-            double phase = animTime * Constants.TENTACLE_WAVE_SPEED + i * 0.8;
-            double waveX = Math.sin(phase) * tentacleWidth * 0.8;
-            double waveX2 = Math.sin(phase + 1.5) * tentacleWidth * 1.2;
-            
-            // Draw tentacle as a curved shape
-            gc.beginPath();
-            gc.moveTo(baseX - tentacleWidth/2, bodyBottom);
-            gc.bezierCurveTo(
-                baseX - tentacleWidth/2 + waveX, bodyBottom + tentacleLength * 0.4,
-                baseX + waveX2, bodyBottom + tentacleLength * 0.7,
-                baseX + waveX * 0.5, bodyBottom + tentacleLength
-            );
-            gc.bezierCurveTo(
-                baseX + tentacleWidth/2 + waveX2 * 0.5, bodyBottom + tentacleLength * 0.7,
-                baseX + tentacleWidth/2 + waveX, bodyBottom + tentacleLength * 0.4,
-                baseX + tentacleWidth/2, bodyBottom
-            );
-            gc.closePath();
-            gc.fill();
-            gc.stroke();
-            
-            // Sucker dots
-            double suckerY1 = bodyBottom + tentacleLength * 0.3;
-            double suckerY2 = bodyBottom + tentacleLength * 0.55;
+        gc.save();
+        gc.setLineCap(StrokeLineCap.ROUND);
+
+        double cx0        = x + w / 2;
+        double bodyBottom = y + h * 0.58;
+        int n = 6;
+
+        for (int i = 0; i < n; i++) {
+            double normalT   = (double) i / (n - 1);              // 0..1
+            double spreadRad = Math.toRadians(-60 + normalT * 120);
+
+            double phase = animTime * 2.3 + i * 1.05;
+            double wave  = Math.sin(phase) * 7;
+
+            double baseX = cx0 + Math.sin(spreadRad) * w * 0.28;
+
+            // Middle tentacles are slightly longer
+            double lenFactor = 0.52 + 0.11 * (1 - Math.abs(normalT - 0.5) * 2);
+            double len       = h * lenFactor;
+
+            double endX  = baseX + Math.sin(spreadRad) * len * 0.5 + wave;
+            double endY  = bodyBottom + len;
+
+            double cp1x  = baseX + Math.sin(spreadRad) * len * 0.18 + wave * 0.3;
+            double cp1y  = bodyBottom + len * 0.32;
+            double cp2x  = baseX + Math.sin(spreadRad) * len * 0.38 + wave;
+            double cp2y  = bodyBottom + len * 0.72;
+
+            double baseW = w * 0.065;
+
+            // Pass 1 – dark shadow outline
+            gc.setStroke(Constants.OCTOPUS_PINK.darker().darker());
+            gc.setLineWidth(baseW);
+            drawCubicStroke(gc, baseX, bodyBottom, cp1x, cp1y, cp2x, cp2y, endX, endY);
+
+            // Pass 2 – main colour
+            gc.setStroke(Constants.OCTOPUS_PINK);
+            gc.setLineWidth(baseW * 0.68);
+            drawCubicStroke(gc, baseX, bodyBottom, cp1x + 1, cp1y, cp2x + 1, cp2y, endX, endY);
+
+            // Pass 3 – highlight stripe
+            gc.setStroke(Constants.OCTOPUS_PINK_SOFT);
+            gc.setLineWidth(baseW * 0.25);
+            drawCubicStroke(gc, baseX, bodyBottom, cp1x + 1, cp1y - 2, cp2x + 1, cp2y - 2, endX, endY);
+
+            // Sucker dots along inner curve
             gc.setFill(Constants.OCTOPUS_PINK_SOFT);
-            gc.fillOval(baseX + waveX * 0.3 - 2, suckerY1 - 2, 4, 4);
-            gc.fillOval(baseX + waveX2 * 0.4 - 2, suckerY2 - 2, 3, 3);
+            double[] suckerTs = {0.28, 0.52, 0.73};
+            for (double t : suckerTs) {
+                double[] pt = cubicPoint(baseX, bodyBottom, cp1x, cp1y, cp2x, cp2y, endX, endY, t);
+                double sd   = 2.0 * (1 - t * 0.45);
+                gc.fillOval(pt[0] - sd, pt[1] - sd, sd * 2, sd * 2);
+            }
         }
+        gc.restore();
+    }
+
+    private void drawCubicStroke(GraphicsContext gc,
+                                  double x0, double y0,
+                                  double cx1, double cy1,
+                                  double cx2, double cy2,
+                                  double x1, double y1) {
+        gc.beginPath();
+        gc.moveTo(x0, y0);
+        gc.bezierCurveTo(cx1, cy1, cx2, cy2, x1, y1);
+        gc.stroke();
+    }
+
+    private double[] cubicPoint(double x0, double y0,
+                                 double cx1, double cy1,
+                                 double cx2, double cy2,
+                                 double x1, double y1, double t) {
+        double u = 1 - t;
+        return new double[]{
+            u*u*u*x0 + 3*u*u*t*cx1 + 3*u*t*t*cx2 + t*t*t*x1,
+            u*u*u*y0 + 3*u*u*t*cy1 + 3*u*t*t*cy2 + t*t*t*y1
+        };
     }
     
     private void drawBody(GraphicsContext gc, double x, double y, double w, double h) {
@@ -432,6 +459,21 @@ public class OctopusRenderer {
         // Right eye
         drawEye(gc, bodyCenterX + eyeSpacing, bodyCenterY, eyeSize, pupilSize);
         
+        // Soft cute eyebrow arches (alive expressions only)
+        if (currentExpression == Expression.NORMAL || currentExpression == Expression.HAPPY_STAR) {
+            gc.setStroke(Constants.OCTOPUS_PINK.darker());
+            gc.setLineWidth(2.0);
+            double browY = bodyCenterY - eyeSize * 0.75;
+            gc.strokeArc(bodyCenterX - eyeSpacing - eyeSize * 0.38,
+                         browY - eyeSize * 0.18,
+                         eyeSize * 0.76, eyeSize * 0.36,
+                         0, 180, ArcType.OPEN);
+            gc.strokeArc(bodyCenterX + eyeSpacing - eyeSize * 0.38,
+                         browY - eyeSize * 0.18,
+                         eyeSize * 0.76, eyeSize * 0.36,
+                         0, 180, ArcType.OPEN);
+        }
+
         // Cute blush cheeks
         gc.setFill(Constants.OCTOPUS_CHEEK);
         double cheekSize = bodyW * 0.12;

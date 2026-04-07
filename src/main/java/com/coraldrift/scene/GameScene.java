@@ -78,6 +78,7 @@ public class GameScene {
 
         // Wire HUD observer for score pops
         engine.setHeartCollectObserver((x, y, pts, gold) -> hud.spawnScorePop(x, y, pts));
+        engine.setJumpObserver((x, y) -> hud.spawnBlup(x, y));
 
         // Layout
         root.getChildren().addAll(gameCanvas, hud);

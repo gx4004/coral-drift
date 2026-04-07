@@ -2,7 +2,9 @@ package com.coraldrift.audio;
 
 import javax.sound.sampled.*;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Synthesizes short PCM tones at runtime — no audio files required.
@@ -13,11 +15,15 @@ public class ToneGenerator {
     private static final int SAMPLE_RATE = 44100;
     private static final int BYTES_PER_SAMPLE = 2; // 16-bit
 
-    private final ExecutorService executor = Executors.newSingleThreadExecutor(r -> {
-        Thread t = new Thread(r, "audio-synth");
-        t.setDaemon(true);
-        return t;
-    });
+    // Up to 8 simultaneous sounds; new requests are dropped (not queued) when all threads busy.
+    // This prevents the "stuck sound" bug where rapid keypresses queue up a backlog.
+    private final ExecutorService executor = new ThreadPoolExecutor(
+        0, 8,
+        500L, TimeUnit.MILLISECONDS,
+        new SynchronousQueue<>(),
+        r -> { Thread t = new Thread(r, "audio-synth"); t.setDaemon(true); return t; },
+        new ThreadPoolExecutor.DiscardPolicy()
+    );
 
     // ─── Wave shape ───────────────────────────────────────────────────────────
 

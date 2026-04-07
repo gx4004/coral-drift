@@ -135,6 +135,20 @@ public class HUD extends StackPane {
         floatingLabels.add(fl);
     }
 
+    public void spawnBlup(double x, double y) {
+        FloatingLabel fl = new FloatingLabel();
+        fl.text        = "blup!";
+        fl.x           = x + 18;
+        fl.y           = y - 5;
+        fl.vy          = -52;
+        fl.maxLifetime = 0.75;
+        fl.lifetime    = fl.maxLifetime;
+        fl.color       = Color.web("#b5eaf7");
+        fl.fontSize    = 15;
+        fl.bubble      = true;
+        floatingLabels.add(fl);
+    }
+
     public void spawnNearMissText(double x, double y) {
         FloatingLabel fl = new FloatingLabel();
         fl.text = "+NEAR MISS!";
@@ -221,6 +235,24 @@ public class HUD extends StackPane {
             gc.save();
             gc.setGlobalAlpha(alpha);
             gc.setFont(Font.font("Arial", FontWeight.BOLD, fl.fontSize));
+
+            if (fl.bubble) {
+                // Speech bubble background
+                double pad = 5;
+                double bw  = fl.text.length() * fl.fontSize * 0.58 + pad * 2;
+                double bh  = fl.fontSize + pad * 2;
+                gc.setGlobalAlpha(alpha * 0.88);
+                gc.setFill(Color.rgb(200, 240, 255, 0.9));
+                gc.fillRoundRect(fl.x - pad, fl.y - fl.fontSize, bw, bh, 8, 8);
+                // Tiny bubble tail
+                gc.fillPolygon(
+                    new double[]{fl.x + 3, fl.x + 11, fl.x - 1},
+                    new double[]{fl.y + 1,  fl.y + 1,  fl.y + 7},
+                    3
+                );
+                gc.setGlobalAlpha(alpha);
+            }
+
             // Shadow
             gc.setFill(Color.BLACK);
             gc.fillText(fl.text, fl.x + 1, fl.y + 1);
@@ -258,5 +290,6 @@ public class HUD extends StackPane {
         double lifetime, maxLifetime;
         Color  color;
         double fontSize;
+        boolean bubble;
     }
 }

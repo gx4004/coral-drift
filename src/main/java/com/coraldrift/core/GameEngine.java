@@ -37,6 +37,17 @@ public class GameEngine implements CollisionSystem.HeartCollectCallback,
         this.heartObserver = obs;
     }
 
+    // ─── Observer for jump blup bubble ────────────────────────────────────────
+    public interface JumpObserver {
+        void onJump(double x, double y);
+    }
+
+    private JumpObserver jumpObserver;
+
+    public void setJumpObserver(JumpObserver obs) {
+        this.jumpObserver = obs;
+    }
+
     // ─── Core systems ─────────────────────────────────────────────────────────
     private final GameState state;
     private final CollisionSystem collisionSystem;
@@ -349,6 +360,9 @@ public class GameEngine implements CollisionSystem.HeartCollectCallback,
         if (state.isPlaying() && !player.isDead()) {
             player.jump();
             AudioManager.getInstance().playJump();
+            if (jumpObserver != null) {
+                jumpObserver.onJump(player.getCenterX(), player.getY());
+            }
         }
     }
 
