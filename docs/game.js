@@ -1,5 +1,5 @@
 // Coral Drift — HTML5 Canvas edition
-// A cute endless runner with a pink octopus
+// A cute endless runner with a gold seahorse
 
 (() => {
   // ─── Setup ───────────────────────────────────────────────────────────────
@@ -49,7 +49,10 @@
   const PINK_DARK = '#c84791';
   const HEART_PINK = '#ff6b7a';
   const TEAL = '#4ecdc4';
-  const GOLD = '#ffd93d';
+  const GOLD = '#ffd23d';
+  const GOLD_LIGHT = '#fff1a8';
+  const GOLD_DEEP = '#c8890e';
+  const GOLD_DARK = '#6b4608';
 
   // ─── Audio (Web Audio synthesis) ─────────────────────────────────────────
   let audioCtx = null;
@@ -167,8 +170,8 @@
     setHappy(dur) { this.expression = 'happy'; this.expressionTimer = dur; },
   };
 
-  // ─── Octopus renderer ────────────────────────────────────────────────────
-  function drawOctopus(x, y, w, h) {
+  // ─── Seahorse renderer ───────────────────────────────────────────────────
+  function drawSeahorse(x, y, w, h) {
     ctx.save();
     const cx = x + w / 2;
     const cy = y + h / 2;
@@ -179,16 +182,19 @@
     ctx.scale(sx, sy);
     ctx.translate(-cx, -cy);
 
-    // Tentacles (6, fanned)
-    drawTentacles(x, y, w, h);
-
-    // Body
-    drawBody(x, y, w, h);
-
-    // Face
-    drawFace(x, y, w, h);
-
-    // Shimmer
+    // Soft golden halo (radiates warmth behind the seahorse)
+    drawGoldenHalo(x, y, w, h);
+    // Back-layer dorsal fin
+    drawDorsalFin(x, y, w, h);
+    // Curled tail behind the body
+    drawCurledTail(x, y, w, h);
+    // Main S-curved body
+    drawSeahorseBody(x, y, w, h);
+    // Pectoral fin in front
+    drawPectoralFin(x, y, w, h);
+    // Head with snout, coronet, eye, mouth
+    drawSeahorseHead(x, y, w, h);
+    // Shimmer highlight
     drawShimmer(x, y, w, h);
 
     ctx.restore();
@@ -196,7 +202,7 @@
     // Ambient sparkles
     drawSparkles(cx, cy + bob, Math.max(w, h));
 
-    // Shield bubble around the octopus when active
+    // Shield bubble around the seahorse when active
     if (player.hasShield) {
       const r = Math.max(w, h) * 0.95;
       const pulse = 1 + Math.sin(player.shieldPulse) * 0.05;
@@ -227,106 +233,312 @@
     }
   }
 
-  function drawTentacles(x, y, w, h) {
-    const cx0 = x + w / 2;
-    const bodyBottom = y + h * 0.58;
-    const n = 6;
-    ctx.lineCap = 'round';
-    for (let i = 0; i < n; i++) {
-      const t = i / (n - 1);
-      const spreadDeg = -60 + t * 120;
-      const spreadRad = spreadDeg * Math.PI / 180;
-      const phase = player.animTime * 2.3 + i * 1.05;
-      const wave = Math.sin(phase) * 7;
-      const baseX = cx0 + Math.sin(spreadRad) * w * 0.28;
-      const lenFactor = 0.52 + 0.11 * (1 - Math.abs(t - 0.5) * 2);
-      const len = h * lenFactor;
-      const endX = baseX + Math.sin(spreadRad) * len * 0.5 + wave;
-      const endY = bodyBottom + len;
-      const cp1x = baseX + Math.sin(spreadRad) * len * 0.18 + wave * 0.3;
-      const cp1y = bodyBottom + len * 0.32;
-      const cp2x = baseX + Math.sin(spreadRad) * len * 0.38 + wave;
-      const cp2y = bodyBottom + len * 0.72;
-      const baseW = w * 0.068;
-      // 3-pass tapered stroke
-      ctx.strokeStyle = PINK_DARK; ctx.lineWidth = baseW;
-      ctx.beginPath(); ctx.moveTo(baseX, bodyBottom); ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, endX, endY); ctx.stroke();
-      ctx.strokeStyle = PINK; ctx.lineWidth = baseW * 0.7;
-      ctx.beginPath(); ctx.moveTo(baseX, bodyBottom); ctx.bezierCurveTo(cp1x + 1, cp1y, cp2x + 1, cp2y, endX, endY); ctx.stroke();
-      ctx.strokeStyle = PINK_SOFT; ctx.lineWidth = baseW * 0.28;
-      ctx.beginPath(); ctx.moveTo(baseX, bodyBottom); ctx.bezierCurveTo(cp1x + 1, cp1y - 2, cp2x + 1, cp2y - 2, endX, endY); ctx.stroke();
-      // Suckers
-      ctx.fillStyle = PINK_SOFT;
-      for (const tt of [0.3, 0.55, 0.75]) {
-        const u = 1 - tt;
-        const px = u*u*u*baseX + 3*u*u*tt*cp1x + 3*u*tt*tt*cp2x + tt*tt*tt*endX;
-        const py = u*u*u*bodyBottom + 3*u*u*tt*cp1y + 3*u*tt*tt*cp2y + tt*tt*tt*endY;
-        const sd = 2.2 * (1 - tt * 0.5);
-        ctx.beginPath(); ctx.arc(px, py, sd, 0, Math.PI * 2); ctx.fill();
+  // ── Layout anchors for the seahorse (inside box x,y,w,h) ─────────────────
+  function seahorseLayout(x, y, w, h) {
+    return {
+      // Head
+      hx: x + w * 0.55,
+      hy: y + h * 0.18,
+      hr: w * 0.16,
+      // Body (tilted ellipse)
+      bcx: x + w * 0.48,
+      bcy: y + h * 0.48,
+      brx: w * 0.21,
+      bry: h * 0.30,
+      rot: -0.18,
+    };
+  }
+
+  function drawGoldenHalo(x, y, w, h) {
+    const L = seahorseLayout(x, y, w, h);
+    const cx = L.bcx;
+    const cy = (L.hy + L.bcy) / 2;
+    const r = Math.max(w, h) * 0.78;
+    const grad = ctx.createRadialGradient(cx, cy, r * 0.25, cx, cy, r);
+    const pulse = 0.32 + 0.07 * Math.sin(player.animTime * 2.2);
+    grad.addColorStop(0, `rgba(255, 225, 110, ${pulse})`);
+    grad.addColorStop(0.55, 'rgba(255, 210, 80, 0.08)');
+    grad.addColorStop(1, 'rgba(255, 210, 80, 0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+  }
+
+  function drawSeahorseBody(x, y, w, h) {
+    const L = seahorseLayout(x, y, w, h);
+
+    // Ground shadow
+    ctx.fillStyle = 'rgba(40, 28, 5, 0.22)';
+    ctx.beginPath();
+    ctx.ellipse(L.bcx + 4, y + h * 0.96, w * 0.30, h * 0.05, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Dark outline (slightly bigger ellipse)
+    ctx.fillStyle = GOLD_DARK;
+    ctx.beginPath();
+    ctx.ellipse(L.bcx, L.bcy, L.brx + 2, L.bry + 2, L.rot, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Main body
+    const grad = ctx.createRadialGradient(
+      L.bcx - L.brx * 0.3, L.bcy - L.bry * 0.35, L.brx * 0.15,
+      L.bcx, L.bcy, Math.max(L.brx, L.bry) * 1.25
+    );
+    grad.addColorStop(0, GOLD_LIGHT);
+    grad.addColorStop(0.45, GOLD);
+    grad.addColorStop(1, GOLD_DEEP);
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.ellipse(L.bcx, L.bcy, L.brx, L.bry, L.rot, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Belly plate rings (horizontal arcs in rotated frame)
+    ctx.save();
+    ctx.translate(L.bcx, L.bcy);
+    ctx.rotate(L.rot);
+    ctx.strokeStyle = 'rgba(90, 55, 5, 0.35)';
+    ctx.lineWidth = 1.3;
+    for (let i = -2; i <= 2; i++) {
+      const py = i * L.bry * 0.28;
+      const halfW = L.brx * Math.sqrt(Math.max(0, 1 - (py / L.bry) ** 2)) * 0.92;
+      ctx.beginPath();
+      ctx.moveTo(-halfW * 0.55, py);
+      ctx.quadraticCurveTo(0, py + 2.2, halfW * 0.95, py);
+      ctx.stroke();
+    }
+
+    // Glossy top-left highlight
+    ctx.fillStyle = 'rgba(255, 250, 220, 0.55)';
+    ctx.beginPath();
+    ctx.ellipse(-L.brx * 0.38, -L.bry * 0.48, L.brx * 0.28, L.bry * 0.16, 0.2, 0, Math.PI * 2);
+    ctx.fill();
+    // Soft second highlight lower
+    ctx.fillStyle = 'rgba(255, 250, 220, 0.28)';
+    ctx.beginPath();
+    ctx.ellipse(-L.brx * 0.25, L.bry * 0.15, L.brx * 0.18, L.bry * 0.08, 0.25, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawCurledTail(x, y, w, h) {
+    // Attach point at bottom-right of body, curl down-left into spiral
+    const p0 = { x: x + w * 0.55, y: y + h * 0.78 }; // attach to body bottom
+    const p1 = { x: x + w * 0.58, y: y + h * 0.97 }; // swings down
+    const p2 = { x: x + w * 0.12, y: y + h * 0.95 }; // down-left
+    const p3 = { x: x + w * 0.18, y: y + h * 0.74 }; // curls up
+    const p4 = { x: x + w * 0.36, y: y + h * 0.76 }; // inner tip
+    const wobble = Math.sin(player.animTime * 2.2) * 2;
+
+    // Sample path: two quadratic beziers joined at p2
+    const pts = [];
+    const half = 22;
+    for (let i = 0; i <= half; i++) {
+      const t = i / half;
+      const u = 1 - t;
+      pts.push({
+        x: u * u * p0.x + 2 * u * t * p1.x + t * t * p2.x + wobble * t * 0.3,
+        y: u * u * p0.y + 2 * u * t * p1.y + t * t * p2.y,
+      });
+    }
+    for (let i = 1; i <= half; i++) {
+      const t = i / half;
+      const u = 1 - t;
+      pts.push({
+        x: u * u * p2.x + 2 * u * t * p3.x + t * t * p4.x,
+        y: u * u * p2.y + 2 * u * t * p3.y + t * t * p4.y,
+      });
+    }
+    const total = pts.length;
+    // Thickness tapers along the path
+    for (let i = 0; i < total; i++) {
+      const t = i / (total - 1);
+      pts[i].thickness = (1 - t * 0.85) * w * 0.22 + 2;
+    }
+
+    // Dark outline pass (draw from tip inward so body-end overlays tail)
+    ctx.fillStyle = GOLD_DARK;
+    for (let i = total - 1; i >= 0; i--) {
+      const p = pts[i];
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.thickness / 2 + 1.6, 0, Math.PI * 2); ctx.fill();
+    }
+    // Segmented gold pass
+    for (let i = total - 1; i >= 0; i--) {
+      const p = pts[i];
+      ctx.fillStyle = (i % 3 === 0) ? GOLD_DEEP : GOLD;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.thickness / 2, 0, Math.PI * 2); ctx.fill();
+    }
+    // Shiny highlights on upper-left of each segment
+    ctx.fillStyle = 'rgba(255, 250, 220, 0.55)';
+    for (let i = 0; i < total; i += 2) {
+      const p = pts[i];
+      ctx.beginPath();
+      ctx.arc(p.x - p.thickness * 0.18, p.y - p.thickness * 0.20, p.thickness * 0.22, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  function drawDorsalFin(x, y, w, h) {
+    // Flowing fin on the back (upper-left) of the body, undulating
+    const flutter = Math.sin(player.animTime * 5) * 2.5;
+    const ripple = Math.sin(player.animTime * 4 + 1.1) * 2;
+
+    ctx.fillStyle = 'rgba(255, 220, 120, 0.58)';
+    ctx.strokeStyle = 'rgba(120, 80, 10, 0.75)';
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.moveTo(x + w * 0.32, y + h * 0.30);
+    ctx.bezierCurveTo(
+      x + w * 0.24 + flutter * 0.3, y + h * 0.22,
+      x + w * 0.10 + ripple * 0.5, y + h * 0.24,
+      x + w * 0.08 + flutter * 0.4, y + h * 0.38
+    );
+    ctx.bezierCurveTo(
+      x + w * 0.12 - ripple * 0.3, y + h * 0.46,
+      x + w * 0.22, y + h * 0.52,
+      x + w * 0.34, y + h * 0.52
+    );
+    ctx.closePath();
+    ctx.fill(); ctx.stroke();
+
+    // Fin ribs
+    ctx.strokeStyle = 'rgba(140, 95, 10, 0.5)';
+    ctx.lineWidth = 1;
+    const ribs = [
+      [0.26, 0.24], [0.18, 0.26], [0.12, 0.32], [0.13, 0.42]
+    ];
+    for (const [rx, ry] of ribs) {
+      ctx.beginPath();
+      ctx.moveTo(x + w * 0.30, y + h * 0.42);
+      ctx.lineTo(x + w * rx + flutter * 0.25, y + h * ry);
+      ctx.stroke();
+    }
+  }
+
+  function drawPectoralFin(x, y, w, h) {
+    // Small fin near the head, fluttering
+    const ax = x + w * 0.60;
+    const ay = y + h * 0.36;
+    const flutter = Math.sin(player.animTime * 7) * 2.3;
+    ctx.fillStyle = 'rgba(255, 230, 150, 0.82)';
+    ctx.strokeStyle = GOLD_DARK; ctx.lineWidth = 1.3;
+    ctx.beginPath();
+    ctx.moveTo(ax, ay);
+    ctx.quadraticCurveTo(ax + 11, ay + 4 + flutter, ax + 17, ay + 12 + flutter * 0.4);
+    ctx.quadraticCurveTo(ax + 6, ay + 15, ax + 1, ay + 6);
+    ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    // Rib
+    ctx.strokeStyle = 'rgba(140, 95, 10, 0.45)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(ax + 2, ay + 3);
+    ctx.quadraticCurveTo(ax + 9, ay + 8 + flutter * 0.5, ax + 15, ay + 11);
+    ctx.stroke();
+  }
+
+  function drawSeahorseHead(x, y, w, h) {
+    const L = seahorseLayout(x, y, w, h);
+    const hx = L.hx, hy = L.hy, hr = L.hr;
+
+    // Neck joining head to body (small filled ellipse) — hides gap
+    ctx.fillStyle = GOLD_DEEP;
+    ctx.beginPath();
+    ctx.ellipse(hx - hr * 0.1, hy + hr * 1.1, hr * 0.7, hr * 0.75, -0.15, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = GOLD_DARK; ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Snout (tapered ellipse extending right from head)
+    ctx.fillStyle = GOLD_DEEP;
+    ctx.strokeStyle = GOLD_DARK; ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.ellipse(hx + hr * 1.05, hy + hr * 0.42, hr * 0.85, hr * 0.32, 0.1, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+    // Snout top highlight
+    ctx.fillStyle = GOLD_LIGHT;
+    ctx.beginPath();
+    ctx.ellipse(hx + hr * 1.15, hy + hr * 0.30, hr * 0.35, hr * 0.08, 0.08, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Head (circle with gradient)
+    const grad = ctx.createRadialGradient(
+      hx - hr * 0.35, hy - hr * 0.35, hr * 0.12,
+      hx, hy, hr * 1.15
+    );
+    grad.addColorStop(0, GOLD_LIGHT);
+    grad.addColorStop(0.45, GOLD);
+    grad.addColorStop(1, GOLD_DEEP);
+    ctx.fillStyle = grad;
+    ctx.beginPath(); ctx.arc(hx, hy, hr, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = GOLD_DARK; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(hx, hy, hr, 0, Math.PI * 2); ctx.stroke();
+
+    // Coronet spikes (slightly leaning back)
+    ctx.fillStyle = GOLD_DEEP;
+    ctx.strokeStyle = GOLD_DARK; ctx.lineWidth = 1.3;
+    const baseSpikeAngle = -Math.PI / 2 - 0.25; // slightly to the left (back)
+    for (let i = 0; i < 3; i++) {
+      const ang = baseSpikeAngle + (i - 1) * 0.42;
+      const baseX = hx + Math.cos(ang) * hr * 0.85;
+      const baseY = hy + Math.sin(ang) * hr * 0.85;
+      const tipX = hx + Math.cos(ang) * hr * 1.65;
+      const tipY = hy + Math.sin(ang) * hr * 1.65;
+      const perpX = -Math.sin(ang);
+      const perpY = Math.cos(ang);
+      ctx.beginPath();
+      ctx.moveTo(baseX - perpX * 3, baseY - perpY * 3);
+      ctx.lineTo(tipX, tipY);
+      ctx.lineTo(baseX + perpX * 3, baseY + perpY * 3);
+      ctx.closePath();
+      ctx.fill(); ctx.stroke();
+    }
+
+    // Pink cheek blush (feminine glow)
+    ctx.fillStyle = 'rgba(255, 130, 170, 0.55)';
+    ctx.beginPath();
+    ctx.ellipse(hx - hr * 0.35, hy + hr * 0.40, hr * 0.32, hr * 0.20, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Blush shimmer highlight
+    ctx.fillStyle = 'rgba(255, 230, 240, 0.45)';
+    ctx.beginPath();
+    ctx.ellipse(hx - hr * 0.38, hy + hr * 0.33, hr * 0.10, hr * 0.04, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Eye
+    const eyeX = hx + hr * 0.18;
+    const eyeY = hy - hr * 0.05;
+    const eyeSize = hr * 0.8;
+    const pupilSize = eyeSize * 0.5;
+    drawEye(eyeX, eyeY, eyeSize, pupilSize);
+
+    // Eyelashes (upper-right of eye)
+    if (player.expression !== 'dead' && !player.blinking) {
+      ctx.strokeStyle = '#1a0f00';
+      ctx.lineWidth = 1.6;
+      ctx.lineCap = 'round';
+      const lashStartAngles = [-Math.PI * 0.78, -Math.PI * 0.55, -Math.PI * 0.32];
+      for (const ang of lashStartAngles) {
+        const bx = eyeX + Math.cos(ang) * eyeSize * 0.48;
+        const by = eyeY + Math.sin(ang) * eyeSize * 0.48;
+        const tx = eyeX + Math.cos(ang) * eyeSize * 0.78;
+        const ty = eyeY + Math.sin(ang) * eyeSize * 0.78 - 0.8;
+        ctx.beginPath();
+        ctx.moveTo(bx, by);
+        ctx.lineTo(tx, ty);
+        ctx.stroke();
       }
     }
-  }
 
-  function drawBody(x, y, w, h) {
-    const bodyW = w * 0.85;
-    const bodyH = h * 0.65;
-    const bodyX = x + (w - bodyW) / 2;
-    // Shadow
-    ctx.fillStyle = 'rgba(80, 40, 80, 0.2)';
-    ctx.beginPath(); ctx.ellipse(bodyX + bodyW/2 + 4, y + bodyH/2 + 5, bodyW/2, bodyH/2, 0, 0, Math.PI * 2); ctx.fill();
-    // Main body gradient
-    const grad = ctx.createRadialGradient(bodyX + bodyW * 0.3, y + bodyH * 0.25, bodyW * 0.1, bodyX + bodyW * 0.5, y + bodyH * 0.5, bodyW * 0.8);
-    grad.addColorStop(0, '#ffc8e6');
-    grad.addColorStop(0.3, PINK_LIGHT);
-    grad.addColorStop(0.7, PINK);
-    grad.addColorStop(1, '#c85090');
-    ctx.fillStyle = grad;
-    ctx.beginPath(); ctx.ellipse(bodyX + bodyW/2, y + bodyH/2, bodyW/2, bodyH/2, 0, 0, Math.PI * 2); ctx.fill();
-    // Outline
-    ctx.strokeStyle = PINK_DARK; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.ellipse(bodyX + bodyW/2, y + bodyH/2, bodyW/2, bodyH/2, 0, 0, Math.PI * 2); ctx.stroke();
-    // Highlight
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-    ctx.beginPath(); ctx.ellipse(bodyX + bodyW * 0.3, y + bodyH * 0.22, bodyW * 0.15, bodyH * 0.12, 0, 0, Math.PI * 2); ctx.fill();
-  }
-
-  function drawFace(x, y, w, h) {
-    const bodyW = w * 0.85;
-    const bodyH = h * 0.65;
-    const bodyX = x + (w - bodyW) / 2;
-    const bcx = bodyX + bodyW / 2;
-    const bcy = y + bodyH * 0.45;
-    const eyeSpacing = bodyW * 0.25;
-    const eyeSize = bodyW * 0.22;
-    const pupilSize = eyeSize * 0.5;
-
-    // Eyebrow arches (cute)
-    if (player.expression !== 'dead') {
-      ctx.strokeStyle = PINK_DARK; ctx.lineWidth = 2;
-      const browY = bcy - eyeSize * 0.8;
-      ctx.beginPath(); ctx.arc(bcx - eyeSpacing, browY, eyeSize * 0.4, Math.PI, 0); ctx.stroke();
-      ctx.beginPath(); ctx.arc(bcx + eyeSpacing, browY, eyeSize * 0.4, Math.PI, 0); ctx.stroke();
-    }
-
-    // Eyes
-    drawEye(bcx - eyeSpacing, bcy, eyeSize, pupilSize);
-    drawEye(bcx + eyeSpacing, bcy, eyeSize, pupilSize);
-
-    // Blush
-    ctx.fillStyle = '#ff9ecd';
-    ctx.beginPath(); ctx.ellipse(bcx - eyeSpacing * 1.6, bcy + eyeSize * 0.5, bodyW * 0.06, bodyW * 0.035, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.ellipse(bcx + eyeSpacing * 1.6, bcy + eyeSize * 0.5, bodyW * 0.06, bodyW * 0.035, 0, 0, Math.PI * 2); ctx.fill();
-
-    // Mouth
-    ctx.strokeStyle = '#3a1a30'; ctx.lineWidth = 2.5;
-    const mY = bcy + eyeSize * 0.85;
+    // Mouth on snout tip
+    ctx.strokeStyle = '#402808'; ctx.lineWidth = 2;
+    const mX = hx + hr * 1.75;
+    const mY = hy + hr * 0.48;
     ctx.beginPath();
     if (player.expression === 'dead') {
-      ctx.arc(bcx, mY + 4, 8, Math.PI * 0.2, Math.PI * 0.8);
+      ctx.arc(mX, mY + 4, 3.5, Math.PI * 0.2, Math.PI * 0.8);
     } else if (player.expression === 'happy') {
-      ctx.arc(bcx, mY - 2, 11, 0.15 * Math.PI, 0.85 * Math.PI);
+      ctx.arc(mX, mY - 1, 4, 0.1 * Math.PI, 0.9 * Math.PI);
     } else {
-      ctx.arc(bcx, mY - 2, 8, 0.15 * Math.PI, 0.85 * Math.PI);
+      ctx.arc(mX, mY + 1, 3, 0.1 * Math.PI, 0.9 * Math.PI);
     }
     ctx.stroke();
   }
@@ -368,7 +580,7 @@
     // Blink eyelid
     if (player.blinking && player.blinkProgress > 0) {
       const lidFraction = player.blinkProgress <= 1 ? player.blinkProgress : 2 - player.blinkProgress;
-      ctx.fillStyle = PINK;
+      ctx.fillStyle = GOLD;
       ctx.fillRect(cx - size/2 - 1, cy - size/2 - 1, size + 2, size * lidFraction + 1);
     }
   }
@@ -1322,13 +1534,13 @@
     ctx.fillText('Coral Drift', LOGICAL_W / 2 + 4, titleY + 4);
     // Gradient title
     const titleGrad = ctx.createLinearGradient(0, titleY - 50, 0, titleY + 10);
-    titleGrad.addColorStop(0, '#ffd4e8');
-    titleGrad.addColorStop(1, PINK);
+    titleGrad.addColorStop(0, GOLD_LIGHT);
+    titleGrad.addColorStop(1, GOLD_DEEP);
     ctx.fillStyle = titleGrad;
     ctx.fillText('Coral Drift', LOGICAL_W / 2, titleY);
 
-    // Octopus mascot
-    drawOctopus(LOGICAL_W / 2 - 60, 250, 120, 110);
+    // Seahorse mascot
+    drawSeahorse(LOGICAL_W / 2 - 60, 250, 120, 110);
 
     // Tap to play
     const pulse = 0.7 + 0.3 * Math.sin(worldTime * 3);
@@ -1496,7 +1708,7 @@
       renderCorals();
       renderHearts();
       renderShieldBubbles();
-      drawOctopus(player.x, player.y, player.width, player.height);
+      drawSeahorse(player.x, player.y, player.width, player.height);
       renderParticles();
       renderFloats();
       renderHUD();
